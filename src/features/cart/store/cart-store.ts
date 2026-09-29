@@ -60,9 +60,6 @@ export const cartStore = {
     emit(readItems());
   },
   subscribe(listener: Listener): () => void {
-    if (typeof window !== "undefined") {
-      snapshot = toCartSnapshot(readItems());
-    }
     listeners.add(listener);
     return () => listeners.delete(listener);
   },

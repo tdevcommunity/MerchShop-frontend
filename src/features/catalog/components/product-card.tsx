@@ -1,35 +1,63 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { CartIcon } from "@/components/ui/icons";
+import { ProductImage } from "@/features/catalog/components/product-image";
+import {
+  PRODUCT_BADGE_LABELS,
+  productFromPrice,
+} from "@/features/catalog/utils";
 import { formatMoney } from "@/lib/utils/format-money";
+import { cn } from "@/lib/utils/cn";
 import type { Product } from "@/types/catalog";
-
-const categoryLabel: Record<Product["category"], string> = {
-  textile: "Textile",
-  accessories: "Accessoires",
-  bagagerie: "Bagagerie",
-};
 
 type ProductCardProps = {
   product: Product;
+  featured?: boolean;
 };
 
-export function ProductCard({ product }: ProductCardProps) {
-  const prices = product.variants.map((variant) => variant.unitPrice);
-  const fromPrice = prices.length > 0 ? Math.min(...prices) : 0;
+export function ProductCard({ product, featured = false }: ProductCardProps) {
+  const fromPrice = productFromPrice(product);
 
   return (
-    <Link href={`/shop/${product.slug}`} className="block h-full">
-      <Card className="flex h-full flex-col gap-3 p-0 overflow-hidden transition-colors hover:border-tdev-yellow/50">
-        <div className="aspect-[4/3] bg-white/5" aria-hidden="true" />
-        <div className="flex flex-1 flex-col gap-2 p-4">
-          <Badge className="self-start">{categoryLabel[product.category]}</Badge>
-          <h2 className="font-headline text-lg text-tdev-white">{product.name}</h2>
-          <p className="mt-auto text-sm text-tdev-yellow">
-            À partir de {formatMoney(fromPrice)}
-          </p>
+    <article
+      className={cn(
+        "flex h-full flex-col border border-tdev-anthracite bg-tdev-white",
+        featured && "lg:col-span-2",
+      )}
+    >
+      <Link href={`/shop/${product.slug}`} className="flex h-full flex-col">
+        <div className="relative border-b border-tdev-anthracite bg-tdev-surface">
+          <ProductImage
+            src={product.imageUrl}
+            alt={product.name}
+            className={featured ? "aspect-[16/9] lg:aspect-[2/1]" : "h-[240px] aspect-auto"}
+          />
+          {product.badge ? (
+            <Badge
+              tone={product.badge}
+              className="absolute left-3 top-3"
+            >
+              {PRODUCT_BADGE_LABELS[product.badge]}
+            </Badge>
+          ) : null}
         </div>
-      </Card>
-    </Link>
+        <div className="flex flex-1 items-end justify-between gap-3 p-4">
+          <div className="flex min-w-0 flex-col gap-2.5">
+            <h2 className="font-headline text-base font-bold leading-tight text-tdev-anthracite">
+              {product.name}
+            </h2>
+            <p className="font-headline text-lg font-extrabold">
+              {formatMoney(fromPrice)}
+            </p>
+          </div>
+          <span
+            className="flex size-9 shrink-0 items-center justify-center bg-tdev-blue text-tdev-white"
+            aria-hidden="true"
+          >
+            <CartIcon className="size-4" />
+          </span>
+        </div>
+      </Link>
+    </article>
   );
 }

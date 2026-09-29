@@ -20,9 +20,11 @@ export async function createCheckoutSession(
   if (useMockApi) {
     return createMockOrder({
       items,
+      customer: draft.customer,
       deliveryMethod: draft.deliveryMethod,
       shippingAddress:
         draft.deliveryMethod === "delivery" ? draft.shippingAddress : null,
+      paymentMethod: draft.paymentMethod,
     });
   }
 
@@ -32,6 +34,7 @@ export async function createCheckoutSession(
       customer: draft.customer,
       deliveryMethod: draft.deliveryMethod,
       shippingAddress: draft.shippingAddress,
+      paymentMethod: draft.paymentMethod,
       items: items.map((item) => ({
         productId: item.productId,
         variantId: item.variantId,

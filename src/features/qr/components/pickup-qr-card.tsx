@@ -5,14 +5,15 @@ import type { PickupQr } from "@/types/qr";
 
 type PickupQrCardProps = {
   qr: PickupQr;
+  compact?: boolean;
 };
 
-export function PickupQrCard({ qr }: PickupQrCardProps) {
+export function PickupQrCard({ qr, compact = false }: PickupQrCardProps) {
   if (qr.status === "pending") {
     return (
       <Card className="flex min-h-64 flex-col items-center justify-center gap-3">
         <Spinner label="Génération du QR de retrait" />
-        <p className="text-sm text-white/70">Préparation du pass de retrait…</p>
+        <p className="text-sm text-tdev-muted">Préparation du pass de retrait…</p>
       </Card>
     );
   }
@@ -27,8 +28,10 @@ export function PickupQrCard({ qr }: PickupQrCardProps) {
   }
 
   return (
-    <Card className="flex flex-col items-center gap-4 p-6">
-      <p className="text-sm text-white/70">À présenter au stand Merch</p>
+    <Card className="flex w-full flex-col items-center gap-4 p-6">
+      {compact ? null : (
+        <p className="text-sm text-tdev-muted">À présenter au stand Merch</p>
+      )}
       {qr.imageUrl ? (
         // Image backend — pas de génération cryptographique côté client.
         // eslint-disable-next-line @next/next/no-img-element
@@ -48,10 +51,12 @@ export function PickupQrCard({ qr }: PickupQrCardProps) {
           (mock — image non générée ici)
         </div>
       )}
-      <p className="text-xs text-white/50">
-        L&apos;affichage n&apos;est pas une preuve de validité. Le scan Chantier 3B
-        valide le pass côté serveur.
-      </p>
+      {compact ? null : (
+        <p className="text-xs text-tdev-muted">
+          L&apos;affichage n&apos;est pas une preuve de validité. Le scan
+          Chantier 3B valide le pass côté serveur.
+        </p>
+      )}
     </Card>
   );
 }

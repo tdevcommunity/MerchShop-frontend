@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
-import { SiteShell } from "@/components/layout/site-shell";
+import type { ReactNode } from "react";
 import { createMetadata } from "@/lib/seo/create-metadata";
 import "./globals.css";
 
 export const metadata: Metadata = createMetadata();
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fr">
-      <body>
-        <SiteShell>{children}</SiteShell>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

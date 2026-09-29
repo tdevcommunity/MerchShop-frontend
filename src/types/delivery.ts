@@ -12,11 +12,18 @@ export type PickupInfo = {
 };
 
 export type ShippingAddress = {
+  /** Quartier / zone de livraison (saisie manuelle). */
   line1: string;
+  /** Adresse formatée Maps, si le lieu vient de la localisation. */
   line2?: string;
   city: string;
   postalCode?: string;
   country: string;
+  lat?: number;
+  lng?: number;
+  placeId?: string;
+  /** Localisation XOR saisie manuelle. */
+  source?: "maps" | "manual";
 };
 
 export type DeliveryInfo = {

@@ -9,7 +9,17 @@ export const mockProducts: Product[] = [
       "T-shirt officiel du TDEV Festival 2026, coupe unisexe, coton lourd.",
     category: "textile",
     imageUrl: null,
+    badge: "bestseller",
     variants: [
+      {
+        id: "var_tee_s_black",
+        productId: "prod_tee_core",
+        size: "S",
+        color: "Noir",
+        sku: "TEE-CORE-S-BLK",
+        stockQuantity: 10,
+        unitPrice: 8000,
+      },
       {
         id: "var_tee_m_black",
         productId: "prod_tee_core",
@@ -29,6 +39,42 @@ export const mockProducts: Product[] = [
         unitPrice: 8000,
       },
       {
+        id: "var_tee_xl_black",
+        productId: "prod_tee_core",
+        size: "XL",
+        color: "Noir",
+        sku: "TEE-CORE-XL-BLK",
+        stockQuantity: 8,
+        unitPrice: 8000,
+      },
+      {
+        id: "var_tee_m_blue",
+        productId: "prod_tee_core",
+        size: "M",
+        color: "Bleu",
+        sku: "TEE-CORE-M-BLU",
+        stockQuantity: 14,
+        unitPrice: 8000,
+      },
+      {
+        id: "var_tee_l_blue",
+        productId: "prod_tee_core",
+        size: "L",
+        color: "Bleu",
+        sku: "TEE-CORE-L-BLU",
+        stockQuantity: 9,
+        unitPrice: 8000,
+      },
+      {
+        id: "var_tee_m_yellow",
+        productId: "prod_tee_core",
+        size: "M",
+        color: "Jaune",
+        sku: "TEE-CORE-M-YLW",
+        stockQuantity: 0,
+        unitPrice: 8000,
+      },
+      {
         id: "var_tee_xl_yellow",
         productId: "prod_tee_core",
         size: "XL",
@@ -43,10 +89,21 @@ export const mockProducts: Product[] = [
     id: "prod_hoodie",
     slug: "hoodie-tdev-night",
     name: "Hoodie TDEV Night",
-    description: "Sweat à capuche anthracite, sérigraphie festival au dos.",
+    description:
+      "Sweat à capuche anthracite, sérigraphie festival au dos. Coton lourd, coupe oversize unisexe.",
     category: "textile",
     imageUrl: null,
+    badge: null,
     variants: [
+      {
+        id: "var_hood_m_anth",
+        productId: "prod_hoodie",
+        size: "M",
+        color: "Anthracite",
+        sku: "HOOD-NIGHT-M",
+        stockQuantity: 5,
+        unitPrice: 18000,
+      },
       {
         id: "var_hood_l_anth",
         productId: "prod_hoodie",
@@ -54,6 +111,15 @@ export const mockProducts: Product[] = [
         color: "Anthracite",
         sku: "HOOD-NIGHT-L",
         stockQuantity: 8,
+        unitPrice: 18000,
+      },
+      {
+        id: "var_hood_xl_anth",
+        productId: "prod_hoodie",
+        size: "XL",
+        color: "Anthracite",
+        sku: "HOOD-NIGHT-XL",
+        stockQuantity: 4,
         unitPrice: 18000,
       },
     ],
@@ -65,6 +131,7 @@ export const mockProducts: Product[] = [
     description: "Casquette brodée, visière incurvée.",
     category: "textile",
     imageUrl: null,
+    badge: "new",
     variants: [
       {
         id: "var_cap_std",
@@ -73,6 +140,15 @@ export const mockProducts: Product[] = [
         color: "Noir",
         sku: "CAP-TDEV-BLK",
         stockQuantity: 40,
+        unitPrice: 6000,
+      },
+      {
+        id: "var_cap_blue",
+        productId: "prod_cap",
+        size: null,
+        color: "Bleu",
+        sku: "CAP-TDEV-BLU",
+        stockQuantity: 16,
         unitPrice: 6000,
       },
     ],
@@ -84,6 +160,7 @@ export const mockProducts: Product[] = [
     description: "Huit stickers vinyle aux couleurs TDEV.",
     category: "accessories",
     imageUrl: null,
+    badge: null,
     variants: [
       {
         id: "var_sticker_pack",
@@ -103,6 +180,7 @@ export const mockProducts: Product[] = [
     description: "Bouteille 500 ml, double paroi, logo TDEV.",
     category: "accessories",
     imageUrl: null,
+    badge: "limited",
     variants: [
       {
         id: "var_bottle_cyan",
@@ -122,6 +200,7 @@ export const mockProducts: Product[] = [
     description: "Tote en coton canvas, impression sérigraphique.",
     category: "bagagerie",
     imageUrl: null,
+    badge: null,
     variants: [
       {
         id: "var_tote_nat",

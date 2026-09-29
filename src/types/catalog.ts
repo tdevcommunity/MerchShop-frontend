@@ -21,6 +21,10 @@ export type ProductVariant = {
   unitPrice: number;
 };
 
+export const PRODUCT_BADGES = ["bestseller", "new", "limited"] as const;
+
+export type ProductBadge = (typeof PRODUCT_BADGES)[number];
+
 export type Product = {
   id: string;
   slug: string;
@@ -28,6 +32,7 @@ export type Product = {
   description: string;
   category: ProductCategory;
   imageUrl: string | null;
+  badge: ProductBadge | null;
   variants: ProductVariant[];
 };
 
