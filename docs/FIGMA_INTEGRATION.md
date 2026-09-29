@@ -1,7 +1,7 @@
 # Intégration Figma — Shop TDEV
 
 Mapping des maquettes Wonder/Figma vers le frontend Next.js existant.
-Les fichiers de `ressources/` restent une **référence visuelle**, pas du code d’application.
+Les fichiers locaux de `ressources/` (gitignorés) restent une **référence visuelle**, pas du code d’application. Ils ne sont pas versionnés.
 
 ## Mapping Figma → routes
 
