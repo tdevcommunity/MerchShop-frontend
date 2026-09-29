@@ -18,9 +18,9 @@ export function CatalogGrid({ products }: CatalogGridProps) {
 
   return (
     <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {products.map((product) => (
-        <li key={product.id}>
-          <ProductCard product={product} />
+      {products.map((product, index) => (
+        <li key={product.id} className={index === 0 ? "sm:col-span-2 lg:col-span-2" : undefined}>
+          <ProductCard product={product} featured={index === 0} />
         </li>
       ))}
     </ul>

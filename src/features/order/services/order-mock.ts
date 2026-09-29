@@ -1,6 +1,8 @@
 import type { CartItem } from "@/types/cart";
+import type { CustomerInfo } from "@/types/checkout";
 import type { DeliveryMethod, ShippingAddress } from "@/types/delivery";
 import type { Order } from "@/types/order";
+import type { PaymentMethod } from "@/types/payment";
 import type { PickupQr } from "@/types/qr";
 import {
   cacheOrder,
@@ -11,8 +13,10 @@ import {
 
 type CreateMockOrderInput = {
   items: CartItem[];
+  customer: CustomerInfo;
   deliveryMethod: DeliveryMethod;
   shippingAddress: ShippingAddress | null;
+  paymentMethod: PaymentMethod | null;
 };
 
 export function createMockOrder(input: CreateMockOrderInput): Order {
@@ -36,10 +40,14 @@ export function createMockOrder(input: CreateMockOrderInput): Order {
       0,
     ),
     paymentStatus: "success",
+    paymentMethod: input.paymentMethod,
+    customer: input.customer,
     deliveryMethod: input.deliveryMethod,
     shippingAddress: input.shippingAddress,
     pickupLabel:
-      input.deliveryMethod === "pickup_event" ? "Stand Merch — Jour J" : null,
+      input.deliveryMethod === "pickup_event"
+        ? "Stand Merch — Village TDEV"
+        : null,
     createdAt: new Date().toISOString(),
   };
 

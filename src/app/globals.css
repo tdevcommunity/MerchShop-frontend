@@ -16,6 +16,10 @@
   --color-tdev-violet: #a022e7;
   --color-tdev-cyan: #42b8ff;
   --color-tdev-pink: #ff70bf;
+  --color-tdev-surface: #f5f5f3;
+  --color-tdev-muted: #5a5a5a;
+  --color-tdev-subtle: #3a3a3a;
+  --color-tdev-border: #e5e5e2;
 
   --font-headline: var(--font-stack-headline);
   --font-notch: var(--font-stack-notch);
@@ -35,13 +39,13 @@
 }
 
 html {
-  background: var(--color-tdev-black);
+  background: var(--color-tdev-white);
 }
 
 body {
   min-height: 100dvh;
-  background: var(--color-tdev-black);
-  color: var(--color-tdev-white);
+  background: var(--color-tdev-white);
+  color: var(--color-tdev-anthracite);
   font-family: var(--font-sans);
 }
 

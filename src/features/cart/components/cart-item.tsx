@@ -1,8 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { QuantityStepper } from "@/components/ui/quantity-stepper";
+import { TrashIcon } from "@/components/ui/icons";
 import { analyticsEvents } from "@/features/analytics/events";
 import { track } from "@/features/analytics/track";
+import { ProductImage } from "@/features/catalog/components/product-image";
 import { useCartActions } from "@/features/cart/hooks/use-cart";
 import { lineSubtotal } from "@/features/cart/utils";
 import { formatMoney } from "@/lib/utils/format-money";
@@ -16,39 +19,33 @@ export function CartItemRow({ item }: CartItemRowProps) {
   const { updateQuantity, removeItem } = useCartActions();
 
   return (
-    <article className="flex gap-4 border-b border-white/10 py-4">
-      <div
-        className="size-20 shrink-0 rounded-md bg-white/10"
-        aria-hidden="true"
-      />
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
+    <article className="flex flex-col gap-4 border border-tdev-anthracite bg-tdev-white p-4 sm:flex-row">
+      <div className="size-28 shrink-0 overflow-hidden border border-tdev-border sm:size-32">
+        <ProductImage
+          src={item.imageUrl}
+          alt={item.productName}
+          className="h-full aspect-auto"
+        />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="font-medium text-tdev-white">{item.productName}</h3>
-            <p className="text-sm text-white/60">{item.variantLabel}</p>
+            <h3 className="font-headline text-lg font-bold">{item.productName}</h3>
+            <p className="mt-1 text-sm text-tdev-muted">{item.variantLabel}</p>
+            <p className="mt-1 text-sm">{formatMoney(item.unitPrice)}</p>
           </div>
-          <p className="text-sm font-medium text-tdev-yellow">
+          <p className="font-headline text-lg font-extrabold">
             {formatMoney(lineSubtotal(item))}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <label className="sr-only" htmlFor={`qty-${item.variantId}`}>
-            Quantité pour {item.productName}
-          </label>
-          <input
+        <div className="flex flex-wrap items-center gap-3">
+          <QuantityStepper
             id={`qty-${item.variantId}`}
-            type="number"
-            min={1}
-            max={10}
             value={item.quantity}
-            onChange={(event) =>
-              updateQuantity(
-                item.productId,
-                item.variantId,
-                Number(event.target.value),
-              )
+            onChange={(value) =>
+              updateQuantity(item.productId, item.variantId, value)
             }
-            className="min-h-11 w-16 rounded-md border border-white/15 bg-tdev-anthracite px-2 text-tdev-white"
+            label={`Quantité pour ${item.productName}`}
           />
           <Button
             variant="ghost"
@@ -61,6 +58,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
               });
             }}
           >
+            <TrashIcon className="size-4" />
             Retirer
           </Button>
         </div>

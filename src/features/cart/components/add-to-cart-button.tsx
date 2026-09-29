@@ -10,12 +10,14 @@ import type { Product, ProductVariant } from "@/types/catalog";
 type AddToCartButtonProps = {
   product: Product;
   variant: ProductVariant | null;
+  quantity?: number;
   disabled?: boolean;
 };
 
 export function AddToCartButton({
   product,
   variant,
+  quantity = 1,
   disabled,
 }: AddToCartButtonProps) {
   const { addItem } = useCartActions();
@@ -34,6 +36,7 @@ export function AddToCartButton({
       color: variant.color,
       unitPrice: variant.unitPrice,
       imageUrl: product.imageUrl,
+      quantity,
     });
     track(analyticsEvents.addToCart, {
       productId: product.id,
@@ -44,7 +47,7 @@ export function AddToCartButton({
   return (
     <Button
       size="lg"
-      className="w-full sm:w-auto"
+      className="w-full"
       onClick={handleClick}
       disabled={isDisabled}
     >

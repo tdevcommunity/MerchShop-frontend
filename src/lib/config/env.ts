@@ -17,6 +17,8 @@ export const env = {
   ),
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "http://localhost:3000",
   apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "",
+  /** Clé navigateur Places (restrict HTTP referrer). Vide = saisie manuelle + géoloc. */
+  googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
 };
 
 export const useMockApi = env.apiBaseUrl.length === 0;

@@ -13,8 +13,8 @@ export function CartView() {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
-      <section aria-label="Articles du panier">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <section className="flex flex-col gap-4" aria-label="Articles du panier">
         {cart.items.map((item) => (
           <CartItemRow
             key={`${item.productId}-${item.variantId}`}

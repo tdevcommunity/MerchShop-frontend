@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes } from "react";
+import { forwardRef, type InputHTMLAttributes } from "react";
 import { cn } from "@/lib/utils/cn";
 
 type InputProps = InputHTMLAttributes<HTMLInputElement> & {
@@ -7,37 +7,37 @@ type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   hint?: string;
 };
 
-export function Input({
-  id,
-  label,
-  error,
-  hint,
-  className,
-  ...props
-}: InputProps) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  { id, label, error, hint, className, ...props },
+  ref,
+) {
   const inputId = id ?? props.name;
   const hintId = hint ? `${inputId}-hint` : undefined;
   const errorId = error ? `${inputId}-error` : undefined;
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={inputId} className="text-sm font-medium text-tdev-white">
+      <label
+        htmlFor={inputId}
+        className="text-sm font-medium text-tdev-anthracite"
+      >
         {label}
       </label>
       <input
+        ref={ref}
         id={inputId}
         aria-invalid={Boolean(error)}
         aria-describedby={[hintId, errorId].filter(Boolean).join(" ") || undefined}
         className={cn(
-          "min-h-11 w-full rounded-md border bg-tdev-anthracite px-3 text-tdev-white",
-          "placeholder:text-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tdev-blue",
-          error ? "border-tdev-orange" : "border-white/15",
+          "min-h-[50px] w-full rounded-none border bg-tdev-white px-3 text-tdev-anthracite",
+          "placeholder:text-tdev-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tdev-blue",
+          error ? "border-tdev-orange" : "border-tdev-anthracite",
           className,
         )}
         {...props}
       />
       {hint ? (
-        <p id={hintId} className="text-xs text-white/60">
+        <p id={hintId} className="text-xs text-tdev-muted">
           {hint}
         </p>
       ) : null}
@@ -48,4 +48,4 @@ export function Input({
       ) : null}
     </div>
   );
-}
+});

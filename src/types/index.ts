@@ -3,11 +3,12 @@ export type {
   Product,
   ProductVariant,
   ProductCategory,
+  ProductBadge,
   Category,
   CatalogFilters,
   TextileSize,
 } from "./catalog";
-export { PRODUCT_CATEGORIES, TEXTILE_SIZES } from "./catalog";
+export { PRODUCT_CATEGORIES, PRODUCT_BADGES, TEXTILE_SIZES } from "./catalog";
 export type { Cart, CartItem } from "./cart";
 export { cartLineKey } from "./cart";
 export type {
@@ -22,8 +23,9 @@ export type {
   CheckoutDraft,
   CheckoutPayload,
   CustomerInfo,
+  MobileOperator,
 } from "./checkout";
-export { CHECKOUT_STEPS } from "./checkout";
+export { CHECKOUT_STEPS, MOBILE_OPERATORS } from "./checkout";
 export type { Payment, PaymentStatus, PaymentMethod } from "./payment";
 export { PAYMENT_STATUSES, PAYMENT_METHODS } from "./payment";
 export type { Order, OrderItem, OrderStatus } from "./order";
