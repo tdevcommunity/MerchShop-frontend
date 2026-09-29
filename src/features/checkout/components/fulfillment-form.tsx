@@ -65,9 +65,9 @@ export function FulfillmentForm() {
   const deliverySelected = draft.deliveryMethod === DELIVERY_METHODS.DELIVERY;
   const address = draft.shippingAddress ?? defaultAddress;
   const receptionNote = pickupSelected
-    ? "Retrait jour J · Gratuit"
+    ? "Retrait sur place"
     : deliverySelected
-      ? "Livraison à l’adresse indiquée"
+      ? "Livraison locale"
       : undefined;
 
   return (
@@ -76,7 +76,21 @@ export function FulfillmentForm() {
       stepIndex={1}
       current="fulfillment"
       backHref="/cart"
-      summary={<CheckoutOrderSummary cart={cart} receptionNote={receptionNote} />}
+      summary={
+        <CheckoutOrderSummary
+          cart={cart}
+          receptionNote={receptionNote}
+          receptionFree={pickupSelected}
+          action={
+            <CheckoutFooterBar
+              total={cart.subtotal}
+              actionLabel="Continuer"
+              onClick={continueNext}
+              variant="sidebar"
+            />
+          }
+        />
+      }
       footer={
         <CheckoutFooterBar
           total={cart.subtotal}
@@ -85,29 +99,42 @@ export function FulfillmentForm() {
         />
       }
     >
-      <div className="flex flex-1 flex-col gap-5 lg:gap-8">
-        <CheckoutStepIntro eyebrow="Étape 1 — Réception" title="Comment tu reçois ?">
-          Retrait au Village TDEV le jour J, ou livraison à l’adresse que tu
-          indiques.
+      <div className="flex flex-1 flex-col gap-5 lg:gap-10">
+        <CheckoutStepIntro
+          eyebrow="Étape 1 — Réception"
+          index="01"
+          title="Comment tu reçois ?"
+        >
+          Choisis comment tu souhaites recevoir les articles officiels du TDEV
+          Festival.
         </CheckoutStepIntro>
 
-        <div className="grid gap-3 lg:grid-cols-2 lg:gap-5">
+        <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
           <MethodCard
             selected={pickupSelected}
             onSelect={() => select(DELIVERY_METHODS.PICKUP_EVENT)}
             icon={
-              <span className="flex size-[42px] items-center justify-center bg-tdev-blue text-tdev-yellow lg:size-14">
-                <MapPinIcon className="size-5 lg:size-6" />
+              <span className="flex size-[42px] items-center justify-center bg-tdev-blue text-tdev-yellow lg:size-10">
+                <MapPinIcon className="size-5" />
               </span>
             }
             title="Retrait jour J"
-            badge={<span className="text-xs font-bold text-tdev-green">Gratuit</span>}
-            description="Récupère ta commande au stand Merch du Village TDEV, avec ton QR Code."
+            badge={
+              <span className="bg-tdev-green px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.275px] text-tdev-white">
+                Gratuit
+              </span>
+            }
+            description="Récupère ta commande directement sur le site du festival avec ton QR Code instantané."
+            footer={
+              pickupSelected
+                ? "Stand Merch - Village TDEV • 12-14 juin 2026"
+                : undefined
+            }
           >
             {pickupSelected ? (
               <span className="bg-tdev-surface px-3 py-2.5 lg:hidden">
                 <span className="block font-bold text-tdev-anthracite">
-                  Stand Merch — Village TDEV
+                  Stand Merch - Village TDEV
                 </span>
                 <span className="text-xs font-medium text-tdev-muted">
                   Présente ton QR Code + une pièce d&apos;identité.
@@ -120,61 +147,29 @@ export function FulfillmentForm() {
             selected={deliverySelected}
             onSelect={() => select(DELIVERY_METHODS.DELIVERY)}
             icon={
-              <span className="flex size-[42px] items-center justify-center bg-tdev-anthracite text-tdev-white lg:size-14">
-                <TruckIcon className="size-5 lg:size-6" />
+              <span className="flex size-[42px] items-center justify-center bg-tdev-anthracite text-tdev-white lg:size-10">
+                <TruckIcon className="size-5" />
               </span>
             }
-            title="Livraison"
+            title="Livraison locale"
             badge={
-              <span className="text-xs font-semibold text-tdev-muted">
-                Selon zones confirmées
+              <span className="bg-[#f0f0ee] px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.275px]">
+                Dès 2 000 FCFA
               </span>
             }
-            description="On te livre à l’adresse que tu indiques. Pays, ville, quartier et localisation."
+            description="Livraison directe à Lomé ou en région sous 3 à 5 jours ouvrés à l'adresse de ton choix."
+            footer="Expédition avec suivi SMS et WhatsApp"
           />
         </div>
 
-        {pickupSelected ? (
-          <section className="hidden flex-1 border border-tdev-anthracite bg-tdev-white lg:grid lg:grid-cols-2 lg:gap-0">
-            <div className="flex flex-col justify-between gap-8 p-8">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-tdev-muted">
-                  Lieu de retrait
-                </p>
-                <h3 className="mt-3 font-headline text-3xl font-extrabold uppercase leading-tight">
-                  Stand Merch
-                  <br />
-                  Village TDEV
-                </h3>
-                <p className="mt-4 max-w-sm text-sm leading-relaxed text-tdev-subtle">
-                  Pas de file d’attente en ligne. Tu présentes ton pass QR le jour J,
-                  on te remet le merch sur place.
-                </p>
-              </div>
-              <p className="text-sm font-bold text-tdev-green">Aucun frais de retrait</p>
-            </div>
-            <dl className="grid grid-rows-3 border-l border-tdev-border">
-              <Fact label="Quand" value="Jour du festival" />
-              <Fact label="À présenter" value="QR merch + pièce d’identité" />
-              <Fact label="Délai" value="Remise immédiate au stand" last />
-            </dl>
-          </section>
-        ) : null}
-
         {deliverySelected ? (
-          <section className="flex-1 border border-tdev-anthracite bg-tdev-white p-4 lg:p-8">
+          <section className="motion-panel flex-1 border border-tdev-anthracite bg-tdev-white p-4 lg:p-8">
             <DeliveryAddressFields
               address={address}
               errors={errors}
               onChange={(shippingAddress) => update({ shippingAddress })}
             />
           </section>
-        ) : null}
-
-        {!pickupSelected && !deliverySelected ? (
-          <p className="hidden border border-dashed border-tdev-border bg-tdev-white px-8 py-16 text-center text-sm text-tdev-muted lg:block">
-            Sélectionne un mode de réception pour afficher les détails.
-          </p>
         ) : null}
 
         {errors.deliveryMethod ? (
@@ -194,6 +189,7 @@ function MethodCard({
   title,
   badge,
   description,
+  footer,
   children,
 }: {
   selected: boolean;
@@ -202,6 +198,7 @@ function MethodCard({
   title: string;
   badge: ReactNode;
   description: string;
+  footer?: string;
   children?: ReactNode;
 }) {
   return (
@@ -210,63 +207,53 @@ function MethodCard({
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        "flex flex-col border-2 bg-tdev-white text-left transition-colors",
-        "lg:min-h-[220px] lg:hover:border-tdev-blue",
-        selected ? "border-tdev-blue" : "border-tdev-anthracite",
+        "relative flex flex-col border-2 bg-tdev-white text-left transition-colors duration-150",
+        "lg:min-h-[248px] lg:justify-between lg:p-5 lg:hover:border-tdev-blue",
+        selected
+          ? "border-tdev-blue lg:bg-[#f8faff] lg:shadow-[3px_3px_0_#155dfc]"
+          : "border-tdev-anthracite lg:opacity-80",
       )}
     >
       <span
         className={cn(
-          "flex items-center gap-3 px-[18px] py-4 lg:px-6 lg:py-5",
-          selected ? "bg-[#eef4ff]" : "",
+          "flex items-center gap-3 px-[18px] py-4 lg:flex-col lg:items-start lg:gap-[7px] lg:p-0",
+          selected ? "bg-[#eef4ff] lg:bg-transparent" : "",
         )}
       >
         {icon}
-        <span className="flex-1">
-          <span className="block font-headline text-[17px] font-extrabold uppercase lg:text-xl">
+        <span className="flex-1 lg:pt-[5px]">
+          <span className="block font-headline text-[17px] font-extrabold uppercase lg:text-lg">
             {title}
           </span>
-          {badge}
+          <span className="mt-1 inline-flex lg:mt-0">{badge}</span>
         </span>
         <span
           className={cn(
-            "flex size-6 items-center justify-center lg:size-7",
-            selected ? "bg-tdev-blue text-tdev-white" : "border-2 border-[#c5c5c5]",
+            "flex size-6 items-center justify-center lg:absolute lg:top-[18px] lg:right-[18px] lg:size-5",
+            selected ? "bg-tdev-blue text-tdev-white" : "border-2 border-[#c5c5c5] lg:hidden",
           )}
         >
-          {selected ? <CheckIcon className="size-[15px]" /> : null}
+          {selected ? <CheckIcon className="size-[15px] lg:size-3.5" /> : null}
         </span>
       </span>
-      <span className="flex flex-1 flex-col gap-3 px-[18px] py-4 text-[13px] leading-relaxed text-tdev-subtle lg:px-6 lg:pb-6 lg:pt-0 lg:text-sm">
+      <span className="flex flex-1 flex-col gap-3 px-[18px] py-4 text-[13px] leading-relaxed text-tdev-subtle lg:p-0 lg:pt-1 lg:text-xs">
         <span className={cn(selected ? "block" : "hidden lg:block")}>
           {description}
         </span>
         {children}
       </span>
+      {footer ? (
+        <span
+          className={cn(
+            "hidden border-t px-0 pt-3 text-[11px] lg:block",
+            selected
+              ? "border-[#d8e6ff] font-medium text-tdev-blue"
+              : "border-tdev-border text-tdev-muted",
+          )}
+        >
+          {footer}
+        </span>
+      ) : null}
     </button>
-  );
-}
-
-function Fact({
-  label,
-  value,
-  last = false,
-}: {
-  label: string;
-  value: string;
-  last?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex flex-col justify-center gap-1 px-8 py-6",
-        last ? "" : "border-b border-tdev-border",
-      )}
-    >
-      <dt className="text-[11px] font-bold uppercase tracking-[0.16em] text-tdev-muted">
-        {label}
-      </dt>
-      <dd className="font-headline text-lg font-extrabold">{value}</dd>
-    </div>
   );
 }

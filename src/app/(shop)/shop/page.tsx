@@ -28,7 +28,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
 
   return (
     <div className="flex flex-col gap-6 px-5 py-10 lg:px-12 lg:py-16">
-      <header className="flex flex-col gap-4">
+      <header className="motion-enter flex flex-col gap-4">
         <p className="text-[13px] font-bold uppercase tracking-[2.6px] text-tdev-blue">
           Catalogue
         </p>

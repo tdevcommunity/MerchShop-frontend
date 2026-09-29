@@ -41,7 +41,7 @@ export function ProductImage({
         fill
         sizes={sizes}
         priority={priority}
-        className="object-cover"
+        className="object-cover transition-transform duration-200 ease-out"
       />
     </div>
   );

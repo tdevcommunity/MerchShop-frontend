@@ -19,7 +19,7 @@ export function HomeFeatured({ product }: HomeFeaturedProps) {
 
   return (
     <section className="flex flex-col border-b border-tdev-anthracite bg-tdev-anthracite text-tdev-white lg:min-h-[520px] lg:flex-row">
-      <div className="relative min-h-[280px] shrink-0 border-b border-[#3a3a3a] lg:w-[620px] lg:border-b-0 lg:border-r">
+      <div className="motion-fade relative min-h-[280px] shrink-0 border-b border-[#3a3a3a] lg:w-[620px] lg:border-b-0 lg:border-r">
         <ProductImage
           src={product.imageUrl}
           alt={product.name}
@@ -29,7 +29,7 @@ export function HomeFeatured({ product }: HomeFeaturedProps) {
           01
         </p>
       </div>
-      <div className="flex flex-1 flex-col justify-center gap-[22px] px-5 py-12 lg:px-14 lg:py-16">
+      <div className="motion-enter motion-delay-1 flex flex-1 flex-col justify-center gap-[22px] px-5 py-12 lg:px-14 lg:py-16">
         <p className="text-[13px] font-bold uppercase tracking-[2.6px] text-tdev-yellow">
           Produit du moment
         </p>

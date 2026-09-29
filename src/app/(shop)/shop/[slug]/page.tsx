@@ -60,7 +60,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         <span aria-hidden="true"> / </span>
         <span className="text-tdev-anthracite">{product.name}</span>
       </nav>
-      <article className="grid gap-8 lg:grid-cols-2">
+      <article className="motion-page grid gap-8 lg:grid-cols-2">
         <ProductGallery product={product} />
         <ProductPurchasePanel product={product} />
       </article>

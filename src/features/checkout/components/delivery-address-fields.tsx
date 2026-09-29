@@ -120,11 +120,14 @@ export function DeliveryAddressFields({
     (address.lat != null || address.line2 ? "maps" : "manual");
   const searchRef = useRef<HTMLInputElement>(null);
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
   const [search, setSearch] = useState(address.line2 ?? "");
   const [locateError, setLocateError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const mapsKey = env.googleMapsApiKey;
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     if (mode !== "maps" || !mapsKey || !searchRef.current) {
@@ -188,7 +191,7 @@ export function DeliveryAddressFields({
       : search.trim();
   const showMap = mode === "maps" && Boolean(mapQuery);
 
-  async function useMyLocation() {
+  async function locateMe() {
     if (!navigator.geolocation) {
       setLocateError("La géolocalisation n'est pas disponible sur cet appareil.");
       return;
@@ -293,7 +296,7 @@ export function DeliveryAddressFields({
               type="button"
               variant="secondary"
               size="sm"
-              onClick={() => void useMyLocation()}
+              onClick={() => void locateMe()}
               disabled={locating}
             >
               <MapPinIcon className="size-4" />

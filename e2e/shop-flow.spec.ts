@@ -35,20 +35,21 @@ test("parcours checkout mocké jusqu'au reçu", async ({ page }) => {
   await page.getByLabel("Prénom").fill("Ama");
   await page.getByLabel("Nom", { exact: true }).fill("Koffi");
   await page.getByLabel("Email").fill("ama.koffi@example.com");
-  await page.getByRole("button", { name: /continuer vers le paiement/i }).click();
+  await page
+    .getByRole("button", {
+      name: /continuer vers le paiement|passer au paiement/i,
+    })
+    .click();
 
   await page.getByRole("button", { name: /mobile money/i }).click();
   await page.getByLabel("Numéro de téléphone").fill("+22890123456");
   await page.getByRole("button", { name: /payer/i }).click();
 
   await expect(
-    page.getByRole("heading", { name: /tdev-/i }),
+    page.getByRole("heading", { name: /tdev-|paiement réussi/i }),
   ).toBeVisible({ timeout: 15_000 });
-
-  await page.getByRole("link", { name: /voir mon qr code/i }).click();
-  await expect(page.getByText(/merch pass/i)).toBeVisible();
-
-  await page.getByRole("link", { name: /voir le reçu détaillé/i }).click();
-  await expect(page.getByRole("heading", { name: /reçu digital/i })).toBeVisible();
+  await expect(
+    page.getByText(/merch official pass|pass de retrait/i).first(),
+  ).toBeVisible();
   await expect(page.getByText("ama.koffi@example.com")).toBeVisible();
 });

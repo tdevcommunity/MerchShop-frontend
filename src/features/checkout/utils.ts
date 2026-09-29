@@ -1,7 +1,10 @@
 import { formatMoney } from "@/lib/utils/format-money";
 import { DELIVERY_METHODS } from "@/types/delivery";
 import type { DeliveryMethod } from "@/types/delivery";
+import type { MobileOperator } from "@/types/checkout";
 import type { PaymentMethod } from "@/types/payment";
+
+export const PICKUP_STAND_NOTE = "Stand Merch - Village TDEV • 12-14 juin 2026";
 
 export function deliveryLabel(method: DeliveryMethod | null): string {
   if (method === DELIVERY_METHODS.PICKUP_EVENT) {
@@ -21,6 +24,16 @@ export function paymentLabel(method: PaymentMethod | null): string {
     return "Carte bancaire";
   }
   return "Non choisi";
+}
+
+export function operatorLabel(operator: MobileOperator | null): string {
+  if (operator === "mixx") {
+    return "Mixx By Yas (Togo)";
+  }
+  if (operator === "moov") {
+    return "Moov Money (Togo)";
+  }
+  return "Mobile Money";
 }
 
 export function customerFullName(firstName: string, lastName: string): string {

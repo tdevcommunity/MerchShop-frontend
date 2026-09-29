@@ -1,6 +1,7 @@
 import { ArrowRightIcon } from "@/components/ui/icons";
 import { buttonClassName } from "@/components/ui/button";
 import { formatMoney } from "@/lib/utils/format-money";
+import { cn } from "@/lib/utils/cn";
 
 type CheckoutFooterBarProps = {
   total: number;
@@ -9,6 +10,7 @@ type CheckoutFooterBarProps = {
   loading?: boolean;
   formId?: string;
   onClick?: () => void;
+  variant?: "bar" | "sidebar";
 };
 
 export function CheckoutFooterBar({
@@ -18,7 +20,29 @@ export function CheckoutFooterBar({
   loading,
   formId,
   onClick,
+  variant = "bar",
 }: CheckoutFooterBarProps) {
+  const button = (
+    <button
+      type={formId ? "submit" : "button"}
+      form={formId}
+      onClick={onClick}
+      disabled={disabled || loading}
+      className={buttonClassName(
+        "brand",
+        "lg",
+        cn("flex-1", variant === "sidebar" && "h-[58px] w-full min-h-[58px]"),
+      )}
+    >
+      {actionLabel}
+      <ArrowRightIcon className="size-4 text-tdev-yellow" />
+    </button>
+  );
+
+  if (variant === "sidebar") {
+    return button;
+  }
+
   return (
     <div className="flex items-center gap-3.5">
       <div className="shrink-0">
@@ -29,16 +53,7 @@ export function CheckoutFooterBar({
           {formatMoney(total)}
         </p>
       </div>
-      <button
-        type={formId ? "submit" : "button"}
-        form={formId}
-        onClick={onClick}
-        disabled={disabled || loading}
-        className={buttonClassName("brand", "lg", "flex-1")}
-      >
-        {loading ? "…" : actionLabel}
-        <ArrowRightIcon className="size-[18px] text-tdev-yellow" />
-      </button>
+      {button}
     </div>
   );
 }
