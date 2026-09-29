@@ -89,3 +89,4 @@ et sympathisants d'acheter les goodies officiels du **TDEV Festival 2026** en li
 - [`../CONTRIBUTING.md`](../CONTRIBUTING.md) — règles de branches et flux de travail
 - [`../CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md) — code de conduite de l'équipe
 - [`CODE_STANDARDS.md`](./CODE_STANDARDS.md) — standards de qualité du code
+- [`FRONTEND_ARCHITECTURE.md`](./FRONTEND_ARCHITECTURE.md) — architecture frontend Next.js

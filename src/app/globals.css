@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+:root {
+  --font-stack-headline: "Stack Sans Headline", "Arial Black", ui-sans-serif, system-ui, sans-serif;
+  --font-stack-notch: "Stack Sans Notch", ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme {
+  --color-tdev-black: #000000;
+  --color-tdev-anthracite: #1b1d1c;
+  --color-tdev-white: #ffffff;
+  --color-tdev-blue: #155dfc;
+  --color-tdev-yellow: #fee800;
+  --color-tdev-orange: #ff691c;
+  --color-tdev-green: #35a623;
+  --color-tdev-violet: #a022e7;
+  --color-tdev-cyan: #42b8ff;
+  --color-tdev-pink: #ff70bf;
+
+  --font-headline: var(--font-stack-headline);
+  --font-notch: var(--font-stack-notch);
+  --font-sans: var(--font-stack-notch);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.08), 0 10px 24px rgb(0 0 0 / 0.18);
+
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+}
+
+html {
+  background: var(--color-tdev-black);
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--color-tdev-black);
+  color: var(--color-tdev-white);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-tdev-cyan);
+  outline-offset: 2px;
+}
