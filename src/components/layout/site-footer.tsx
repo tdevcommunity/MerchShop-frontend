@@ -1,13 +1,7 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/layout/brand-mark";
+import { listShopCategories } from "@/features/catalog/services/catalog-service";
 import { siteConfig } from "@/lib/config/site";
-
-const boutiqueLinks = [
-  { href: "/shop?category=textile", label: "Vêtements" },
-  { href: "/shop?category=accessories", label: "Accessoires" },
-  { href: "/shop?category=bagagerie", label: "Bagagerie" },
-  { href: "/shop", label: "Tout le catalogue" },
-];
 
 const aideLinks = [
   { href: "/checkout", label: "Livraison" },
@@ -15,7 +9,16 @@ const aideLinks = [
   { href: "/shop", label: "Guide des tailles" },
 ];
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const categories = await listShopCategories();
+  const boutiqueLinks = [
+    ...categories.map((category) => ({
+      href: `/shop?category=${category.slug}`,
+      label: category.label,
+    })),
+    { href: "/shop", label: "Tout le catalogue" },
+  ];
+
   return (
     <footer className="mt-auto bg-tdev-anthracite px-5 py-14 text-tdev-white lg:px-12">
       <div className="flex flex-col gap-12 lg:flex-row">

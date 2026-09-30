@@ -135,8 +135,12 @@ function seedState(): ShopState {
   };
 }
 
+function useFileStore() {
+  return env.appEnv !== "production" && env.appEnv !== "test" && !process.env.VITEST;
+}
+
 function persist(state: ShopState) {
-  if (env.appEnv === "production" || env.appEnv === "test" || process.env.VITEST) {
+  if (!useFileStore()) {
     return;
   }
   try {
@@ -153,10 +157,7 @@ function persist(state: ShopState) {
 }
 
 function loadState(): ShopState {
-  if (globalStore.__tdevShopStore) {
-    return globalStore.__tdevShopStore;
-  }
-  if (env.appEnv !== "production" && env.appEnv !== "test" && !process.env.VITEST) {
+  if (useFileStore()) {
     try {
       const file = dataFile();
       if (existsSync(file)) {
@@ -167,6 +168,9 @@ function loadState(): ShopState {
     } catch {
       // ignore corrupt store
     }
+  }
+  if (globalStore.__tdevShopStore) {
+    return globalStore.__tdevShopStore;
   }
   const seeded = seedState();
   globalStore.__tdevShopStore = seeded;
@@ -197,7 +201,10 @@ export function toPublicProduct(product: AdminProduct): Product {
     slug: product.slug,
     name: product.name,
     description: product.description,
-    category: product.category as Product["category"],
+    category: product.category,
+    categoryLabel:
+      loadState().categories.find((category) => category.slug === product.category)?.label ??
+      product.category,
     imageUrl: product.images[0] ?? product.imageUrl,
     badge: product.featured ? "bestseller" : product.badge,
     variants: product.variants
@@ -207,6 +214,7 @@ export function toPublicProduct(product: AdminProduct): Product {
         productId: variant.productId,
         size: variant.size,
         color: variant.color,
+        colorHex: variant.colorHex ?? null,
         sku: variant.sku,
         stockQuantity: variant.stockQuantity,
         unitPrice: variant.unitPrice,
@@ -253,6 +261,12 @@ export function getAdminProduct(idValue: string) {
 
 export function listCategories() {
   return [...loadState().categories].sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export function listPublicCategories() {
+  return listCategories()
+    .filter((category) => category.active)
+    .map((category) => ({ slug: category.slug, label: category.label }));
 }
 
 export function createCategory(
@@ -315,6 +329,7 @@ export function createProduct(
     variants: Array<{
       size: AdminVariant["size"];
       color: string | null;
+      colorHex?: string | null;
       sku: string;
       stockQuantity: number;
       unitPrice: number;
@@ -358,6 +373,7 @@ export function createProduct(
         productId,
         size: variant.size,
         color: variant.color,
+        colorHex: variant.colorHex ?? null,
         sku: variant.sku.trim().toUpperCase(),
         stockQuantity: Math.max(0, Math.floor(variant.stockQuantity)),
         unitPrice: variant.unitPrice,

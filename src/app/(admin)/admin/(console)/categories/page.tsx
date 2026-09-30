@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AdminAction } from "@/features/admin/components/admin-action";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
@@ -47,8 +48,15 @@ export default function AdminCategoriesPage() {
 
   async function patch(id: string, body: Partial<AdminCategory>) {
     try {
-      await adminRequest(`/api/admin/categories/${id}`, { method: "PATCH", body });
-      await load();
+      const updated = await adminRequest<AdminCategory>(`/api/admin/categories/${id}`, {
+        method: "PATCH",
+        body,
+      });
+      setCategories((current) =>
+        [...(current ?? []).map((category) => (category.id === id ? updated : category))].sort(
+          (left, right) => left.sortOrder - right.sortOrder,
+        ),
+      );
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Mise à jour impossible.");
     }
@@ -93,34 +101,29 @@ export default function AdminCategoriesPage() {
                   <td className="p-3 font-medium">{category.label}</td>
                   <td className="p-3">{category.slug}</td>
                   <td className="p-3">
-                    <StatusBadge value={category.active ? "published" : "archived"} />
+                    <StatusBadge value={category.active ? "active" : "inactive"} />
                   </td>
                   <td className="p-3">
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="text-xs font-bold underline"
+                    <div className="flex flex-wrap gap-1.5">
+                      <AdminAction
                         disabled={index === 0}
                         onClick={() =>
                           void patch(category.id, { sortOrder: Math.max(1, category.sortOrder - 1) })
                         }
                       >
                         Monter
-                      </button>
-                      <button
-                        type="button"
-                        className="text-xs font-bold underline"
+                      </AdminAction>
+                      <AdminAction
                         onClick={() => void patch(category.id, { sortOrder: category.sortOrder + 1 })}
                       >
                         Descendre
-                      </button>
-                      <button
-                        type="button"
-                        className="text-xs font-bold underline"
+                      </AdminAction>
+                      <AdminAction
+                        tone={category.active ? "danger" : "success"}
                         onClick={() => void patch(category.id, { active: !category.active })}
                       >
                         {category.active ? "Désactiver" : "Activer"}
-                      </button>
+                      </AdminAction>
                     </div>
                   </td>
                 </tr>

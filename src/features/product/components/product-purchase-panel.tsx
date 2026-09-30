@@ -7,9 +7,10 @@ import { AddToCartButton } from "@/features/cart/components/add-to-cart-button";
 import { analyticsEvents } from "@/features/analytics/events";
 import { track } from "@/features/analytics/track";
 import {
-  CATEGORY_LABELS,
+  categoryLabel,
   PRODUCT_BADGE_LABELS,
   colorSwatchClass,
+  colorSwatchStyle,
 } from "@/features/catalog/utils";
 import { formatMoney } from "@/lib/utils/format-money";
 import { cn } from "@/lib/utils/cn";
@@ -106,7 +107,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
     <div className="flex flex-col gap-6">
       <div>
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <Badge>{CATEGORY_LABELS[product.category]}</Badge>
+          <Badge>{product.categoryLabel ?? categoryLabel(product.category)}</Badge>
           {product.badge ? (
             <Badge tone={product.badge}>{PRODUCT_BADGE_LABELS[product.badge]}</Badge>
           ) : null}
@@ -129,20 +130,25 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
             Couleur
           </legend>
           <div className="flex flex-wrap gap-2">
-            {colors.map((item) => (
-              <button
-                key={item}
-                type="button"
-                aria-pressed={item === color}
-                aria-label={item}
-                onClick={() => selectColor(item)}
-                className={cn(
-                  "size-11 border-2 transition-colors duration-150",
-                  colorSwatchClass(item),
-                  item === color ? "border-tdev-blue" : "border-tdev-anthracite",
-                )}
-              />
-            ))}
+            {colors.map((item) => {
+              const hex =
+                product.variants.find((variant) => variant.color === item)?.colorHex ?? null;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  aria-pressed={item === color}
+                  aria-label={item}
+                  onClick={() => selectColor(item)}
+                  className={cn(
+                    "size-11 border-2 transition-colors duration-150",
+                    colorSwatchClass(item),
+                    item === color ? "border-tdev-blue" : "border-tdev-anthracite",
+                  )}
+                  style={colorSwatchStyle(item, hex)}
+                />
+              );
+            })}
           </div>
           {color ? (
             <p className="mt-2 text-sm text-tdev-muted">{color}</p>

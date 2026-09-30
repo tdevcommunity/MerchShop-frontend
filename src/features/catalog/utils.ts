@@ -1,10 +1,21 @@
-import type { Product, ProductBadge, ProductCategory } from "@/types/catalog";
+import type { Category, Product, ProductBadge, ProductCategory } from "@/types/catalog";
 
 export const CATEGORY_LABELS: Record<ProductCategory, string> = {
   textile: "Vêtements",
   accessories: "Accessoires",
   bagagerie: "Bagagerie",
 };
+
+export function categoryLabel(
+  slug: string,
+  categories: Category[] = [],
+): string {
+  return (
+    categories.find((category) => category.slug === slug)?.label ??
+    CATEGORY_LABELS[slug as ProductCategory] ??
+    slug
+  );
+}
 
 export const PRODUCT_BADGE_LABELS: Record<ProductBadge, string> = {
   bestseller: "Best-seller",
@@ -45,13 +56,35 @@ export const PRODUCT_COLOR_OPTIONS = [
   "Vert",
 ] as const;
 
+export function isPaletteColor(color: string): boolean {
+  return PRODUCT_COLOR_OPTIONS.some(
+    (option) => option.toLowerCase() === color.trim().toLowerCase(),
+  );
+}
+
 export function colorSwatchClass(color: string): string {
-  return COLOR_SWATCHES[color.toLowerCase()] ?? "bg-[#9a9a9a]";
+  return COLOR_SWATCHES[color.toLowerCase()] ?? "";
+}
+
+export function colorSwatchStyle(
+  color: string,
+  hex?: string | null,
+): { backgroundColor: string } | undefined {
+  if (hex && /^#[0-9a-f]{6}$/i.test(hex)) {
+    return { backgroundColor: hex };
+  }
+  if (/^#[0-9a-f]{6}$/i.test(color)) {
+    return { backgroundColor: color };
+  }
+  if (!isPaletteColor(color)) {
+    return { backgroundColor: "#9a9a9a" };
+  }
+  return undefined;
 }
 
 export function countByCategory(
   products: Product[],
-  category: ProductCategory,
+  category: string,
 ): number {
   return products.filter((product) => product.category === category).length;
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { AdminAction, AdminActionLink } from "@/features/admin/components/admin-action";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
@@ -42,9 +43,19 @@ export default function AdminProductsPage() {
 
   async function patch(id: string, body: Record<string, unknown>) {
     setBusyId(id);
+    setError(null);
     try {
-      await adminRequest(`/api/admin/products/${id}`, { method: "PATCH", body });
-      await load();
+      const updated = await adminRequest<AdminProduct>(`/api/admin/products/${id}`, {
+        method: "PATCH",
+        body,
+      });
+      if (body.duplicate) {
+        await load();
+        return;
+      }
+      setProducts((current) =>
+        (current ?? []).map((product) => (product.id === id ? updated : product)),
+      );
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : "Action impossible.");
     } finally {
@@ -116,42 +127,36 @@ export default function AdminProductsPage() {
                     </td>
                     <td className="p-3 text-tdev-muted">{product.createdAt.slice(0, 10)}</td>
                     <td className="p-3">
-                      <div className="flex flex-wrap gap-1">
-                        <Link href={`/admin/products/${product.id}`} className="text-xs font-bold underline">
-                          Voir
-                        </Link>
-                        <button
-                          type="button"
+                      <div className="flex flex-wrap gap-1.5">
+                        <AdminActionLink href={`/admin/products/${product.id}`} tone="brand">
+                          Modifier
+                        </AdminActionLink>
+                        <AdminAction
                           disabled={busyId === product.id}
-                          className="text-xs font-bold underline"
                           onClick={() => void patch(product.id, { duplicate: true })}
                         >
                           Dupliquer
-                        </button>
+                        </AdminAction>
                         {product.status === "published" ? (
-                          <button
-                            type="button"
+                          <AdminAction
                             disabled={busyId === product.id}
-                            className="text-xs font-bold underline"
                             onClick={() => void patch(product.id, { status: "draft" })}
                           >
                             Dépublier
-                          </button>
+                          </AdminAction>
                         ) : (
-                          <button
-                            type="button"
+                          <AdminAction
+                            tone="success"
                             disabled={busyId === product.id}
-                            className="text-xs font-bold underline"
                             onClick={() => void patch(product.id, { status: "published" })}
                           >
                             Publier
-                          </button>
+                          </AdminAction>
                         )}
                         {product.status !== "archived" ? (
-                          <button
-                            type="button"
+                          <AdminAction
+                            tone="danger"
                             disabled={busyId === product.id}
-                            className="text-xs font-bold underline text-tdev-orange"
                             onClick={() => {
                               if (window.confirm(`Archiver « ${product.name} » ?`)) {
                                 void patch(product.id, { status: "archived" });
@@ -159,7 +164,7 @@ export default function AdminProductsPage() {
                             }}
                           >
                             Archiver
-                          </button>
+                          </AdminAction>
                         ) : null}
                       </div>
                     </td>

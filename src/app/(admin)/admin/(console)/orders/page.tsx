@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
+import { AdminActionLink } from "@/features/admin/components/admin-action";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
@@ -155,9 +155,9 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="p-3">{order.status === "awaiting_payment" ? "—" : "Prêt"}</td>
                     <td className="p-3">
-                      <Link href={`/admin/orders/${order.id}`} className="text-xs font-bold underline">
+                      <AdminActionLink href={`/admin/orders/${order.id}`} tone="brand">
                         Détail
-                      </Link>
+                      </AdminActionLink>
                     </td>
                   </tr>
                 ))}

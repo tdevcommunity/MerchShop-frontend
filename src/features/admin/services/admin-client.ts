@@ -14,6 +14,7 @@ export async function adminRequest<T>(
   const { body, headers, ...rest } = options;
   const response = await fetch(path, {
     ...rest,
+    cache: "no-store",
     credentials: "include",
     headers: {
       Accept: "application/json",

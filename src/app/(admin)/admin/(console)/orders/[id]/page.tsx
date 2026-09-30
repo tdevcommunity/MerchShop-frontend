@@ -37,11 +37,11 @@ export default function AdminOrderDetailPage() {
     setBusy(true);
     setError(null);
     try {
-      await adminRequest(`/api/admin/orders/${id}/status`, {
+      const order = await adminRequest<AdminOrder>(`/api/admin/orders/${id}/status`, {
         method: "PATCH",
         body: { status },
       });
-      await load();
+      setData((current) => (current ? { ...current, order } : { order, qr: null }));
     } catch (statusError) {
       setError(statusError instanceof Error ? statusError.message : "Transition interdite.");
     } finally {

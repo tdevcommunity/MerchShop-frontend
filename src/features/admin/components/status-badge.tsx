@@ -20,6 +20,8 @@ const TONES: Record<string, string> = {
   low: "bg-tdev-yellow text-tdev-anthracite",
   out: "bg-tdev-orange text-tdev-white",
   disabled: "bg-[#f0f0ee] text-tdev-muted",
+  active: "bg-tdev-green text-tdev-white",
+  inactive: "bg-[#f0f0ee] text-tdev-muted",
 };
 
 type StatusBadgeProps = {

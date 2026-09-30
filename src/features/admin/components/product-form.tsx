@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { adminRequest } from "@/features/admin/services/admin-client";
-import { colorSwatchClass, PRODUCT_COLOR_OPTIONS } from "@/features/catalog/utils";
+import {
+  colorSwatchClass,
+  isPaletteColor,
+  PRODUCT_COLOR_OPTIONS,
+} from "@/features/catalog/utils";
 import { TEXTILE_SIZES } from "@/types/catalog";
 import type { AdminCategory, AdminProduct, AdminVariant, ProductStatus } from "@/types/admin";
 
@@ -13,6 +17,7 @@ type VariantDraft = {
   id?: string;
   size: (typeof TEXTILE_SIZES)[number] | null;
   color: string;
+  colorHex: string;
   sku: string;
   stockQuantity: number;
   unitPrice: number;
@@ -44,11 +49,12 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       id: variant.id,
       size: variant.size,
       color: variant.color ?? "",
+      colorHex: variant.colorHex ?? "#c8b4a0",
       sku: variant.sku,
       stockQuantity: variant.stockQuantity,
       unitPrice: variant.unitPrice,
     })) ?? [
-      { size: "M", color: "Noir", sku: "", stockQuantity: 0, unitPrice: 0 },
+      { size: "M", color: "Noir", colorHex: "", sku: "", stockQuantity: 0, unitPrice: 0 },
     ],
   );
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +108,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             ...variant,
             sku,
             color: variant.color || null,
+            colorHex: isPaletteColor(variant.color) ? null : variant.colorHex || null,
           };
         }),
       };
@@ -115,6 +122,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             productId: product.id,
             size: variant.size,
             color: variant.color,
+            colorHex: variant.color && isPaletteColor(variant.color) ? null : variant.colorHex || null,
             sku: variant.sku,
             stockQuantity: variant.stockQuantity,
             unitPrice: variant.unitPrice,
@@ -254,7 +262,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             onClick={() =>
               setVariants((current) => [
                 ...current,
-                { size: null, color: "", sku: "", stockQuantity: 0, unitPrice: 0 },
+                { size: null, color: "", colorHex: "", sku: "", stockQuantity: 0, unitPrice: 0 },
               ])
             }
           >
@@ -293,10 +301,25 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               <label className="flex flex-col gap-1.5 text-sm font-medium">
                 Couleur
                 <span className="flex items-center gap-2">
-                  {variant.color ? (
+                  {variant.color && isPaletteColor(variant.color) ? (
                     <span
                       aria-hidden
                       className={`size-7 shrink-0 border border-tdev-anthracite ${colorSwatchClass(variant.color)}`}
+                    />
+                  ) : null}
+                  {variant.color && !isPaletteColor(variant.color) ? (
+                    <input
+                      type="color"
+                      aria-label={`Teinte ${variant.color}`}
+                      className="size-9 shrink-0 cursor-pointer border border-tdev-anthracite bg-tdev-white p-0"
+                      value={variant.colorHex || "#c8b4a0"}
+                      onChange={(event) =>
+                        setVariants((current) =>
+                          current.map((item, i) =>
+                            i === index ? { ...item, colorHex: event.target.value } : item,
+                          ),
+                        )
+                      }
                     />
                   ) : null}
                   <select
@@ -311,7 +334,13 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                       setCustomColorFor(null);
                       setVariants((current) =>
                         current.map((item, i) =>
-                          i === index ? { ...item, color: value } : item,
+                          i === index
+                            ? {
+                                ...item,
+                                color: value,
+                                colorHex: isPaletteColor(value) ? "" : item.colorHex || "#c8b4a0",
+                              }
+                            : item,
                         ),
                       );
                     }}
@@ -326,31 +355,52 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                   </select>
                 </span>
                 {customColorFor === index ? (
-                  <input
-                    className="h-11 border border-tdev-anthracite px-2 text-sm font-normal"
-                    placeholder="Nom de la couleur"
-                    autoFocus
-                    onBlur={(event) => {
-                      const next = event.target.value.trim();
-                      if (!next) {
+                  <span className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      aria-label="Choisir une teinte"
+                      className="size-9 shrink-0 cursor-pointer border border-tdev-anthracite bg-tdev-white p-0"
+                      defaultValue={variant.colorHex || "#c8b4a0"}
+                      onChange={(event) =>
+                        setVariants((current) =>
+                          current.map((item, i) =>
+                            i === index ? { ...item, colorHex: event.target.value } : item,
+                          ),
+                        )
+                      }
+                    />
+                    <input
+                      className="h-11 min-w-0 flex-1 border border-tdev-anthracite px-2 text-sm font-normal"
+                      placeholder="Nom de la couleur"
+                      autoFocus
+                      onBlur={(event) => {
+                        const next = event.target.value.trim();
+                        if (!next) {
+                          setCustomColorFor(null);
+                          return;
+                        }
+                        setExtraColors((current) => uniqueColors([...current, next]));
+                        setVariants((current) =>
+                          current.map((item, i) =>
+                            i === index
+                              ? {
+                                  ...item,
+                                  color: next,
+                                  colorHex: item.colorHex || "#c8b4a0",
+                                }
+                              : item,
+                          ),
+                        );
                         setCustomColorFor(null);
-                        return;
-                      }
-                      setExtraColors((current) => uniqueColors([...current, next]));
-                      setVariants((current) =>
-                        current.map((item, i) =>
-                          i === index ? { ...item, color: next } : item,
-                        ),
-                      );
-                      setCustomColorFor(null);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        event.currentTarget.blur();
-                      }
-                    }}
-                  />
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          event.currentTarget.blur();
+                        }
+                      }}
+                    />
+                  </span>
                 ) : null}
               </label>
               <label className="flex flex-col gap-1.5 text-sm font-medium">

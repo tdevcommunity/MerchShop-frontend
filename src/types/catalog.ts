@@ -15,6 +15,8 @@ export type ProductVariant = {
   productId: string;
   size: TextileSize | null;
   color: string | null;
+  /** Teinte libre (hex) si la couleur n'est pas dans la palette Shop. */
+  colorHex?: string | null;
   sku: string;
   /** Stock serveur — le frontend ne doit pas en déduire une vente certaine. */
   stockQuantity: number;
@@ -30,18 +32,19 @@ export type Product = {
   slug: string;
   name: string;
   description: string;
-  category: ProductCategory;
+  category: string;
+  categoryLabel?: string;
   imageUrl: string | null;
   badge: ProductBadge | null;
   variants: ProductVariant[];
 };
 
 export type Category = {
-  id: ProductCategory;
+  slug: string;
   label: string;
 };
 
 export type CatalogFilters = {
-  category?: ProductCategory;
+  category?: string;
   query?: string;
 };

@@ -1,9 +1,8 @@
 import { CatalogGrid } from "@/features/catalog/components/catalog-grid";
 import { CategoryFilter } from "@/features/catalog/components/category-filter";
-import { listProducts } from "@/features/catalog/services/catalog-service";
-import { CATEGORY_LABELS } from "@/features/catalog/utils";
+import { listProducts, listShopCategories } from "@/features/catalog/services/catalog-service";
+import { categoryLabel } from "@/features/catalog/utils";
 import { createMetadata } from "@/lib/seo/create-metadata";
-import { PRODUCT_CATEGORIES, type ProductCategory } from "@/types/catalog";
 
 export const metadata = createMetadata({
   title: "La boutique",
@@ -14,17 +13,16 @@ type ShopPageProps = {
   searchParams: Promise<{ category?: string; query?: string }>;
 };
 
-function isCategory(value: string | undefined): value is ProductCategory {
-  return Boolean(value && PRODUCT_CATEGORIES.includes(value as ProductCategory));
-}
-
 export default async function ShopPage({ searchParams }: ShopPageProps) {
   const params = await searchParams;
-  const category = isCategory(params.category) ? params.category : undefined;
+  const categories = await listShopCategories();
+  const category = categories.some((item) => item.slug === params.category)
+    ? params.category
+    : undefined;
   const query = params.query?.trim() || undefined;
   const products = await listProducts({ category, query });
 
-  const heading = category ? CATEGORY_LABELS[category] : "La boutique";
+  const heading = category ? categoryLabel(category, categories) : "La boutique";
 
   return (
     <div className="flex flex-col gap-6 px-5 py-10 lg:px-12 lg:py-16">
@@ -41,7 +39,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
             {query ? ` pour « ${query} »` : ""}
           </p>
         </div>
-        <CategoryFilter active={category} query={query} />
+        <CategoryFilter categories={categories} active={category} query={query} />
       </header>
       <CatalogGrid products={products} />
     </div>

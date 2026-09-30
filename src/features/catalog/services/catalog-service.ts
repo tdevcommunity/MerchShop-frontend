@@ -2,11 +2,19 @@ import { apiRequest } from "@/lib/api/client";
 import { apiEndpoints } from "@/lib/api/endpoints";
 import { NotFoundError } from "@/lib/api/errors";
 import { useMockApi } from "@/lib/config/env";
-import type { CatalogFilters, Product } from "@/types/catalog";
+import type { CatalogFilters, Category, Product } from "@/types/catalog";
 import {
   findPublishedProduct,
+  listPublicCategories,
   listPublishedProducts,
 } from "@/server/shop-store";
+
+export async function listShopCategories(): Promise<Category[]> {
+  if (useMockApi) {
+    return listPublicCategories();
+  }
+  return apiRequest<Category[]>(apiEndpoints.categories);
+}
 
 export async function listProducts(
   filters: CatalogFilters = {},
