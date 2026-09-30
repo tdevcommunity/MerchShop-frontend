@@ -19,55 +19,58 @@ type CreateMockOrderInput = {
   paymentMethod: PaymentMethod | null;
 };
 
-export function createMockOrder(input: CreateMockOrderInput): Order {
-  const id = `ord_mock_${Date.now()}`;
-  const order: Order = {
-    id,
-    reference: `TDEV-${id.slice(-6).toUpperCase()}`,
-    status: "paid",
-    items: input.items.map((item) => ({
-      productId: item.productId,
-      variantId: item.variantId,
-      productName: item.productName,
-      variantLabel: item.variantLabel,
-      size: item.size,
-      color: item.color,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-    })),
-    total: input.items.reduce(
-      (sum, item) => sum + item.unitPrice * item.quantity,
-      0,
-    ),
-    paymentStatus: "success",
-    paymentMethod: input.paymentMethod,
-    customer: input.customer,
-    deliveryMethod: input.deliveryMethod,
-    shippingAddress: input.shippingAddress,
-    pickupLabel:
-      input.deliveryMethod === "pickup_event"
-        ? "Stand Merch — Village TDEV"
-        : null,
-    createdAt: new Date().toISOString(),
-  };
-
+export async function createMockOrder(input: CreateMockOrderInput): Promise<Order> {
+  const response = await fetch("/api/shop/orders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    throw new Error("Impossible d'enregistrer la commande.");
+  }
+  const order = (await response.json()) as Order;
   const qr: PickupQr = {
-    orderId: id,
+    orderId: order.id,
     status: "ready",
     imageUrl: null,
     alt: `QR de retrait ${order.reference}`,
   };
-
   cacheOrder(order);
   cachePickupQr(qr);
-
   return order;
 }
 
-export function getMockOrder(id: string): Order | undefined {
-  return readCachedOrder(id);
+export async function getMockOrder(id: string): Promise<Order | undefined> {
+  const cached = readCachedOrder(id);
+  if (cached) {
+    return cached;
+  }
+  const response = await fetch(`/api/shop/orders/${id}`, { headers: { Accept: "application/json" } });
+  if (!response.ok) {
+    return undefined;
+  }
+  const data = (await response.json()) as { order: Order; qr: PickupQr | null };
+  cacheOrder(data.order);
+  if (data.qr) {
+    cachePickupQr(data.qr);
+  }
+  return data.order;
 }
 
-export function getMockPickupQr(orderId: string): PickupQr | undefined {
-  return readCachedPickupQr(orderId);
+export async function getMockPickupQr(orderId: string): Promise<PickupQr | undefined> {
+  const cached = readCachedPickupQr(orderId);
+  if (cached) {
+    return cached;
+  }
+  const response = await fetch(`/api/shop/orders/${orderId}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    return undefined;
+  }
+  const data = (await response.json()) as { order: Order; qr: PickupQr | null };
+  if (data.qr) {
+    cachePickupQr(data.qr);
+  }
+  return data.qr ?? undefined;
 }

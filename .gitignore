@@ -56,3 +56,6 @@ CLAUDE.md
 # Maquettes Wonder/Figma (référence visuelle locale)
 /ressources
 
+# Store local du BFF admin (dev / test uniquement)
+/.data/
+

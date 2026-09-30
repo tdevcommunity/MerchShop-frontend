@@ -4,15 +4,15 @@ import { NotFoundError } from "@/lib/api/errors";
 import { useMockApi } from "@/lib/config/env";
 import type { CatalogFilters, Product } from "@/types/catalog";
 import {
-  findMockProductBySlug,
-  mockProducts,
-} from "@/features/catalog/services/catalog-mock";
+  findPublishedProduct,
+  listPublishedProducts,
+} from "@/server/shop-store";
 
 export async function listProducts(
   filters: CatalogFilters = {},
 ): Promise<Product[]> {
   const products = useMockApi
-    ? mockProducts
+    ? listPublishedProducts()
     : await apiRequest<Product[]>(apiEndpoints.products);
 
   return products.filter((product) => {
@@ -29,7 +29,7 @@ export async function listProducts(
 
 export async function getProductBySlug(slug: string): Promise<Product> {
   const product = useMockApi
-    ? findMockProductBySlug(slug)
+    ? findPublishedProduct(slug)
     : await apiRequest<Product>(apiEndpoints.productBySlug(slug));
 
   if (!product) {

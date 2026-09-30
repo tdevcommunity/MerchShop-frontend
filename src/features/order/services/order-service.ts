@@ -7,7 +7,7 @@ import { getMockOrder } from "@/features/order/services/order-mock";
 
 export async function getOrderById(id: string): Promise<Order> {
   const order = useMockApi
-    ? getMockOrder(id)
+    ? await getMockOrder(id)
     : await apiRequest<Order>(apiEndpoints.orderById(id));
 
   if (!order) {

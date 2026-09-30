@@ -8,11 +8,15 @@ export const ORDER_STATUSES = [
   "draft",
   "awaiting_payment",
   "paid",
+  "processing",
   "ready_for_pickup",
   "shipped",
+  "picked_up",
   "completed",
   "cancelled",
   "expired",
+  "payment_failed",
+  "refunded",
 ] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];

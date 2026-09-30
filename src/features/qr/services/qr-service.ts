@@ -7,7 +7,7 @@ import { getMockPickupQr } from "@/features/order/services/order-mock";
 export async function getPickupQr(orderId: string): Promise<PickupQr> {
   if (useMockApi) {
     return (
-      getMockPickupQr(orderId) ?? {
+      (await getMockPickupQr(orderId)) ?? {
         orderId,
         status: "unavailable",
         imageUrl: null,
