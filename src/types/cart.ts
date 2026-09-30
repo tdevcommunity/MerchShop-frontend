@@ -6,15 +6,13 @@ import type { TextileSize } from "./catalog";
  * Prix, stock et totaux seront recalculés / validés par le backend au checkout.
  */
 export type CartItem = {
-  productId: string;
-  variantId: string;
+  variantUuid: string;
   productName: string;
-  variantLabel: string;
-  size: TextileSize | null;
+  variantName: string;
+  size: string | null;
   color: string | null;
   quantity: number;
-  unitPrice: MoneyAmount;
-  imageUrl: string | null;
+  price: number;
 };
 
 export type Cart = {
@@ -24,6 +22,6 @@ export type Cart = {
   itemCount: number;
 };
 
-export function cartLineKey(productId: string, variantId: string): string {
-  return `${productId}:${variantId}`;
+export function cartLineKey(productUuid: string, variantUuid: string): string {
+  return `${productUuid}:${variantUuid}`;
 }

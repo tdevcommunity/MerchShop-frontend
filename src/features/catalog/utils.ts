@@ -1,5 +1,12 @@
 import type { Category, Product, ProductBadge, ProductCategory } from "@/types/catalog";
 
+/** Extrait le slug de catégorie depuis un product.category qui peut être un objet, une string ou null. */
+export function categorySlug(category: Product["category"] | string | null | undefined): string {
+  if (!category) return "";
+  if (typeof category === "string") return category;
+  return category.slug;
+}
+
 export const CATEGORY_LABELS: Record<ProductCategory, string> = {
   textile: "Vêtements",
   accessories: "Accessoires",
@@ -7,11 +14,15 @@ export const CATEGORY_LABELS: Record<ProductCategory, string> = {
 };
 
 export function categoryLabel(
-  slug: string,
+  category: Product["category"] | string | null | undefined,
   categories: Category[] = [],
 ): string {
+  const slug = categorySlug(category);
+  if (!slug) return "";
+  // Si l'objet catégorie embarque déjà un `name`, on le préfère.
+  if (category && typeof category === "object" && category.name) return category.name;
   return (
-    categories.find((category) => category.slug === slug)?.label ??
+    categories.find((cat) => cat.slug === slug)?.label ??
     CATEGORY_LABELS[slug as ProductCategory] ??
     slug
   );
@@ -86,5 +97,5 @@ export function countByCategory(
   products: Product[],
   category: string,
 ): number {
-  return products.filter((product) => product.category === category).length;
+  return products.filter((product) => categorySlug(product.category) === category).length;
 }

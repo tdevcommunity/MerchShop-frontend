@@ -5,7 +5,11 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
   images: {
     remotePatterns: [
-      // Hosts d'images produits (Cloudinary / S3) à ajouter quand le backend est figé.
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "/**",
+      },
     ],
   },
 };

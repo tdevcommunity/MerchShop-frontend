@@ -64,7 +64,7 @@ function FooterColumn({
       </p>
       {links.map((link) => (
         <Link
-          key={link.label}
+          key={link.href}
           href={link.href}
           className="text-sm font-medium text-[#c5c5c5] hover:text-tdev-white"
         >

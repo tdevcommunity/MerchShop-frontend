@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRightIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/features/catalog/components/product-image";
+import { categorySlug } from "@/features/catalog/utils";
 import { staggerDelay } from "@/lib/motion";
 import type { Category, Product } from "@/types/catalog";
 
@@ -25,8 +26,8 @@ export function HomeCategories({ products, categories }: HomeCategoriesProps) {
       </div>
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {categories.map((category, index) => {
-          const count = products.filter((product) => product.category === category.slug).length;
-          const sample = products.find((product) => product.category === category.slug);
+          const count = products.filter((product) => categorySlug(product.category) === category.slug).length;
+          const sample = products.find((product) => categorySlug(product.category) === category.slug);
           return (
             <li
               key={category.slug}
