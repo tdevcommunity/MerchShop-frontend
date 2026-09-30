@@ -882,20 +882,23 @@ export function dashboardSnapshot(range?: {
   to?: string;
 }): DashboardSnapshot {
   const state = loadState();
-  const today = new Date();
-  const toKey = (range?.to && /^\d{4}-\d{2}-\d{2}$/.test(range.to)
-    ? range.to
-    : today.toISOString().slice(0, 10));
-  const defaultFrom = new Date(toKey);
-  defaultFrom.setDate(defaultFrom.getDate() - 6);
-  const fromKey = (range?.from && /^\d{4}-\d{2}-\d{2}$/.test(range.from)
-    ? range.from
-    : defaultFrom.toISOString().slice(0, 10));
+  const today = localDayKey(new Date());
+  const toKey =
+    range?.to && /^\d{4}-\d{2}-\d{2}$/.test(range.to) ? range.to : today;
+  const defaultFromDate = parseLocalDay(toKey);
+  defaultFromDate.setDate(defaultFromDate.getDate() - 6);
+  const fromKey =
+    range?.from && /^\d{4}-\d{2}-\d{2}$/.test(range.from)
+      ? range.from
+      : localDayKey(defaultFromDate);
   const from = fromKey <= toKey ? fromKey : toKey;
   const to = fromKey <= toKey ? toKey : fromKey;
 
-  const inRange = (createdAt: string) => {
-    const day = createdAt.slice(0, 10);
+  const inRange = (isoDate: string | null | undefined) => {
+    if (!isoDate) {
+      return false;
+    }
+    const day = isoDate.slice(0, 10);
     return day >= from && day <= to;
   };
 
@@ -905,17 +908,23 @@ export function dashboardSnapshot(range?: {
       order.status,
     ),
   );
+  const pickedInPeriod = state.orders.filter((order) => {
+    if (!["picked_up", "completed"].includes(order.status)) {
+      return false;
+    }
+    return inRange(order.pickupValidatedAt ?? order.createdAt);
+  });
 
-  const start = new Date(`${from}T00:00:00.000Z`);
-  const end = new Date(`${to}T00:00:00.000Z`);
+  const start = parseLocalDay(from);
+  const end = parseLocalDay(to);
   const dayCount = Math.min(
     92,
     Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1),
   );
   const days = Array.from({ length: dayCount }, (_, index) => {
     const date = new Date(start);
-    date.setUTCDate(start.getUTCDate() + index);
-    const key = date.toISOString().slice(0, 10);
+    date.setDate(start.getDate() + index);
+    const key = localDayKey(date);
     const dayOrders = paid.filter((order) => order.createdAt.slice(0, 10) === key);
     return {
       date: key,
@@ -943,10 +952,9 @@ export function dashboardSnapshot(range?: {
     pendingOrders: periodOrders.filter((order) =>
       ["awaiting_payment", "payment_failed"].includes(order.status),
     ).length,
-    readyForPickup: periodOrders.filter((order) => order.status === "ready_for_pickup").length,
-    pickedUp: periodOrders.filter((order) =>
-      ["picked_up", "completed"].includes(order.status),
-    ).length,
+    readyForPickup: periodOrders.filter((order) => order.status === "ready_for_pickup")
+      .length,
+    pickedUp: pickedInPeriod.length,
     activeProducts: state.products.filter((product) => product.status === "published").length,
     lowStockProducts: new Set(
       inventory.filter((row) => row.level === "low" || row.level === "out").map((row) => row.productId),
@@ -966,6 +974,22 @@ export function dashboardSnapshot(range?: {
         threshold: row.threshold,
       })),
   };
+}
+
+function padDay(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function localDayKey(date: Date) {
+  return `${date.getFullYear()}-${padDay(date.getMonth() + 1)}-${padDay(date.getDate())}`;
+}
+
+function parseLocalDay(key: string) {
+  const [yearRaw, monthRaw, dayRaw] = key.split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  return new Date(year, month - 1, day, 12, 0, 0, 0);
 }
 
 export function searchStore(query: string) {

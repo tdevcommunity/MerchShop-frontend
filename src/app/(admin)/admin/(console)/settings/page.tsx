@@ -134,13 +134,13 @@ export default function AdminSettingsPage() {
       <AdminState loading={!users && !error} error={error} />
       {users ? (
         <div className="grid gap-6">
-          <section className="border border-tdev-anthracite bg-tdev-white p-5">
-            <h2 className="font-headline text-lg font-extrabold uppercase">
+          <section className="border border-tdev-anthracite bg-tdev-white p-4 sm:p-5">
+            <h2 className="font-headline text-base font-extrabold uppercase sm:text-lg">
               Inviter un membre
             </h2>
             <form
               onSubmit={invite}
-              className="mt-4 grid max-w-3xl gap-3 sm:grid-cols-[1fr_1fr_auto_auto]"
+              className="mt-4 grid max-w-3xl gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto]"
             >
               <Input
                 name="invite-name"
@@ -164,7 +164,7 @@ export default function AdminSettingsPage() {
                 onChange={(event) => setInviteRole(event.target.value as AdminRole)}
                 options={ROLE_OPTIONS}
               />
-              <Button type="submit" variant="brand" className="self-end" disabled={saving}>
+              <Button type="submit" variant="brand" className="w-full self-end sm:w-auto" disabled={saving}>
                 {saving ? "Invitation…" : "Inviter"}
               </Button>
             </form>

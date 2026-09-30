@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClassName } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { adminRequest } from "@/features/admin/services/admin-client";
 import {
@@ -10,6 +10,7 @@ import {
   isPaletteColor,
   PRODUCT_COLOR_OPTIONS,
 } from "@/features/catalog/utils";
+import { cn } from "@/lib/utils/cn";
 import { TEXTILE_SIZES } from "@/types/catalog";
 import type { AdminCategory, AdminProduct, AdminVariant, ProductStatus } from "@/types/admin";
 
@@ -28,6 +29,44 @@ type ProductFormProps = {
   categories: AdminCategory[];
   product?: AdminProduct;
 };
+
+type ImageFilePickerProps = {
+  label: string;
+  onFile: (file: File) => void;
+  className?: string;
+};
+
+function ImageFilePicker({ label, onFile, className }: ImageFilePickerProps) {
+  const id = useId();
+
+  return (
+    <div className={cn("flex flex-col gap-1.5", className)}>
+      <input
+        id={id}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) {
+            onFile(file);
+          }
+          event.target.value = "";
+        }}
+      />
+      <label
+        htmlFor={id}
+        className={buttonClassName(
+          "secondary",
+          "md",
+          "w-full cursor-pointer border-2 border-dashed border-tdev-anthracite bg-tdev-surface hover:bg-tdev-white sm:w-auto",
+        )}
+      >
+        {label}
+      </label>
+    </div>
+  );
+}
 
 function uniqueColors(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.map((value) => value?.trim()).filter(Boolean))] as string[];
@@ -321,28 +360,27 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             </div>
           ))}
         </div>
-        <div className="mt-4 flex gap-2">
-          <Input
-            name="imageUrl"
-            label="URL image"
-            value={imageUrl}
-            onChange={(event) => setImageUrl(event.target.value)}
-          />
-          <Button type="button" className="self-end" onClick={addImage}>
-            Ajouter
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="min-w-0 flex-1">
+            <Input
+              name="imageUrl"
+              label="URL image"
+              value={imageUrl}
+              onChange={(event) => setImageUrl(event.target.value)}
+            />
+          </div>
+          <Button type="button" className="w-full sm:w-auto" onClick={addImage}>
+            Ajouter URL
           </Button>
         </div>
-        <input
-          type="file"
-          accept="image/*"
-          className="mt-3 text-sm"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void onProductFile(file);
-          }}
+        <ImageFilePicker
+          className="mt-3"
+          label="Importer depuis l'appareil"
+          onFile={(file) => void onProductFile(file)}
         />
         <p className="mt-2 text-xs text-tdev-muted">
-          Image principale / fallback si une couleur n&apos;a pas encore de photo.
+          Image principale / fallback si une couleur n&apos;a pas encore de photo. Lien Drive
+          accepté si le fichier est partagé «&nbsp;Toute personne disposant du lien&nbsp;».
         </p>
       </section>
 
@@ -399,21 +437,23 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                     <p className="text-sm font-extrabold uppercase tracking-[0.08em]">
                       {color}
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      <Input
-                        name={`color-image-${color}`}
-                        label="URL"
-                        value={colorImageDraft[color] ?? ""}
-                        onChange={(event) =>
-                          setColorImageDraft((current) => ({
-                            ...current,
-                            [color]: event.target.value,
-                          }))
-                        }
-                      />
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <div className="min-w-0 flex-1">
+                        <Input
+                          name={`color-image-${color}`}
+                          label="URL"
+                          value={colorImageDraft[color] ?? ""}
+                          onChange={(event) =>
+                            setColorImageDraft((current) => ({
+                              ...current,
+                              [color]: event.target.value,
+                            }))
+                          }
+                        />
+                      </div>
                       <Button
                         type="button"
-                        className="self-end"
+                        className="w-full sm:w-auto"
                         onClick={() => {
                           const next = colorImageDraft[color]?.trim();
                           if (next) {
@@ -425,18 +465,12 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                           }
                         }}
                       >
-                        Lier
+                        Lier URL
                       </Button>
                     </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      aria-label={`Photo ${color}`}
-                      className="text-sm"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        if (file) void onColorFile(color, file);
-                      }}
+                    <ImageFilePicker
+                      label={`Importer photo ${color}`}
+                      onFile={(file) => void onColorFile(color, file)}
                     />
                   </div>
                 </div>
@@ -473,7 +507,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         </div>
         <div className="mt-4 flex flex-col gap-3">
           {variants.map((variant, index) => (
-            <div key={index} className="grid gap-2 border border-tdev-border p-3 sm:grid-cols-5">
+            <div key={index} className="grid gap-2 border border-tdev-border p-3 sm:grid-cols-2 lg:grid-cols-5">
               <label className="flex flex-col gap-1.5 text-sm font-medium">
                 Taille
                 <select

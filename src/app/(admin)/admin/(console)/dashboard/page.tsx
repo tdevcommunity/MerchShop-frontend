@@ -10,14 +10,24 @@ import type { DashboardSnapshot } from "@/types/admin";
 
 type Preset = "today" | "7d" | "30d" | "custom";
 
+function pad(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+/** Jour calendaire local (évite le décalage UTC de toISOString). */
+function formatLocalDate(date: Date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+  return formatLocalDate(new Date());
 }
 
 function shiftDays(days: number) {
   const date = new Date();
+  date.setHours(12, 0, 0, 0);
   date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+  return formatLocalDate(date);
 }
 
 function rangeForPreset(preset: Exclude<Preset, "custom">) {
@@ -45,12 +55,32 @@ export default function AdminDashboardPage() {
   }, [from, to]);
 
   useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
-    void adminRequest<DashboardSnapshot>(`/api/admin/dashboard?${query}`)
-      .then(setData)
-      .catch((loadError: Error) => setError(loadError.message))
-      .finally(() => setLoading(false));
+    setData(null);
+
+    void adminRequest<DashboardSnapshot>(`/api/admin/dashboard?${query}`, {
+      signal: controller.signal,
+    })
+      .then((snapshot) => {
+        if (!controller.signal.aborted) {
+          setData(snapshot);
+        }
+      })
+      .catch((loadError: Error) => {
+        if (controller.signal.aborted || loadError.name === "AbortError") {
+          return;
+        }
+        setError(loadError.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
   }, [query]);
 
   function applyPreset(next: Exclude<Preset, "custom">) {
@@ -62,14 +92,14 @@ export default function AdminDashboardPage() {
 
   const kpis = data
     ? [
-        { label: "Chiffre d'affaires", value: formatMoney(data.revenue) },
-        { label: "Commandes", value: String(data.orders) },
-        { label: "Payées", value: String(data.paidOrders) },
-        { label: "En attente", value: String(data.pendingOrders) },
-        { label: "À retirer", value: String(data.readyForPickup) },
-        { label: "Retirées", value: String(data.pickedUp) },
-        { label: "Produits actifs", value: String(data.activeProducts) },
-        { label: "Stock faible", value: String(data.lowStockProducts) },
+        { label: "Chiffre d'affaires", value: formatMoney(data.revenue), period: true },
+        { label: "Commandes", value: String(data.orders), period: true },
+        { label: "Payées", value: String(data.paidOrders), period: true },
+        { label: "En attente", value: String(data.pendingOrders), period: true },
+        { label: "À retirer", value: String(data.readyForPickup), period: true },
+        { label: "Retirées", value: String(data.pickedUp), period: true },
+        { label: "Produits actifs", value: String(data.activeProducts), period: false },
+        { label: "Stock faible", value: String(data.lowStockProducts), period: false },
       ]
     : [];
   const maxSale = Math.max(...(data?.salesByDay.map((day) => day.amount) ?? [0]), 1);
@@ -79,7 +109,7 @@ export default function AdminDashboardPage() {
     <div>
       <PageHeader
         title="Dashboard"
-        description="Activité réelle du Shop, filtrable par période. Stock et catalogue restent l'état actuel."
+        description="CA, commandes et retraits suivent la période. Produits actifs / stock restent l'état actuel."
       />
 
       <div className="mb-6 flex flex-col gap-3 border border-tdev-anthracite bg-tdev-white p-4">
@@ -118,65 +148,73 @@ export default function AdminDashboardPage() {
             Personnalisé
           </button>
         </div>
-        <div className="grid max-w-xl gap-3 sm:grid-cols-[1fr_1fr_auto]">
-          <label className="text-sm font-medium">
-            Du
-            <input
-              type="date"
-              className="mt-1.5 h-11 w-full border border-tdev-anthracite px-2 font-normal"
-              value={from}
-              max={to}
-              onChange={(event) => {
-                setPreset("custom");
-                setFrom(event.target.value);
-              }}
-            />
-          </label>
-          <label className="text-sm font-medium">
-            Au
-            <input
-              type="date"
-              className="mt-1.5 h-11 w-full border border-tdev-anthracite px-2 font-normal"
-              value={to}
-              min={from}
-              max={todayKey()}
-              onChange={(event) => {
-                setPreset("custom");
-                setTo(event.target.value);
-              }}
-            />
-          </label>
-          <Button
-            type="button"
-            variant="secondary"
-            className="self-end"
-            onClick={() => applyPreset("7d")}
-          >
-            Réinitialiser
-          </Button>
-        </div>
-        {data ? (
-          <p className="text-xs text-tdev-muted">
-            Période active : {data.from} → {data.to}
-            {loading ? " · actualisation…" : ""}
-          </p>
+        {preset === "custom" ? (
+          <div className="grid max-w-xl gap-3 sm:grid-cols-[1fr_1fr_auto]">
+            <label className="text-sm font-medium">
+              Du
+              <input
+                type="date"
+                className="mt-1.5 h-11 w-full border border-tdev-anthracite px-2 font-normal"
+                value={from}
+                max={to}
+                onChange={(event) => {
+                  setPreset("custom");
+                  setFrom(event.target.value);
+                }}
+              />
+            </label>
+            <label className="text-sm font-medium">
+              Au
+              <input
+                type="date"
+                className="mt-1.5 h-11 w-full border border-tdev-anthracite px-2 font-normal"
+                value={to}
+                min={from}
+                max={todayKey()}
+                onChange={(event) => {
+                  setPreset("custom");
+                  setTo(event.target.value);
+                }}
+              />
+            </label>
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full self-end sm:w-auto"
+              onClick={() => applyPreset("7d")}
+            >
+              Réinitialiser
+            </Button>
+          </div>
         ) : null}
+        <p className="text-xs text-tdev-muted">
+          Période active : {from} → {to}
+          {loading ? " · actualisation…" : ""}
+        </p>
       </div>
 
       {error ? <p className="mb-4 text-tdev-orange">{error}</p> : null}
-      {!data && loading ? (
+      {loading && !data ? (
         <p className="text-sm text-tdev-muted">Chargement du tableau de bord…</p>
       ) : null}
 
       {data ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div
+            className={cn(
+              "grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4",
+              loading && "opacity-60",
+            )}
+          >
             {kpis.map((kpi) => (
-              <article key={kpi.label} className="border border-tdev-anthracite bg-tdev-white p-4">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-tdev-muted">
+              <article key={kpi.label} className="border border-tdev-anthracite bg-tdev-white p-3 sm:p-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-tdev-muted sm:text-[11px] sm:tracking-[0.16em]">
                   {kpi.label}
                 </p>
-                <p className="mt-2 font-headline text-2xl font-extrabold">{kpi.value}</p>
+                <p className="mt-2 font-headline text-lg font-extrabold sm:text-2xl">{kpi.value}</p>
+                <p className="mt-1 text-[10px] text-tdev-muted">
+                  {kpi.period ? "Sur la période" : "État actuel"}
+                </p>
               </article>
             ))}
           </div>
@@ -209,9 +247,7 @@ export default function AdminDashboardPage() {
             <section className="border border-tdev-anthracite bg-tdev-white p-5">
               <h2 className="font-headline text-lg font-extrabold uppercase">Top produits</h2>
               {data.topProducts.length === 0 ? (
-                <p className="mt-4 text-sm text-tdev-muted">
-                  Aucune vente sur cette période.
-                </p>
+                <p className="mt-4 text-sm text-tdev-muted">Aucune vente sur cette période.</p>
               ) : (
                 <ul className="mt-4 divide-y divide-tdev-border">
                   {data.topProducts.map((product) => (

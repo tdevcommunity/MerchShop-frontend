@@ -89,7 +89,7 @@ function AdminOrdersContent() {
         title="Commandes"
         description="Filtres et pagination serveur — le détail s'ouvre en popup."
       />
-      <div className="mb-4 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+      <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <input
           value={query}
           onChange={(event) => {

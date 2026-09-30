@@ -288,7 +288,7 @@ export default function AdminInventoryPage() {
             placeholder="Réception nouvelle marchandise"
           />
         </label>
-        <Button type="submit" variant="brand" className="self-end" disabled={saving}>
+        <Button type="submit" variant="brand" className="w-full self-end lg:w-auto" disabled={saving}>
           Ajuster
         </Button>
       </form>

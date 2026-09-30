@@ -1,5 +1,9 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils/cn";
+import {
+  isRemoteProductImage,
+  resolveProductImageSrc,
+} from "@/features/catalog/utils/image-src";
 
 type ProductImageProps = {
   src: string | null;
@@ -8,10 +12,6 @@ type ProductImageProps = {
   sizes?: string;
   priority?: boolean;
 };
-
-function isInlineImage(src: string) {
-  return src.startsWith("data:") || src.startsWith("blob:");
-}
 
 export function ProductImage({
   src,
@@ -37,11 +37,21 @@ export function ProductImage({
     );
   }
 
-  if (isInlineImage(src)) {
+  const resolved = resolveProductImageSrc(src);
+
+  // URLs admin libres (Drive, data URL, CDN non whitelisté) : <img> natif.
+  // next/image reste pour les assets locaux une fois le CDN produit configuré.
+  if (isRemoteProductImage(resolved)) {
     return (
       <div className={cn("relative overflow-hidden bg-tdev-surface", className)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={alt} className="absolute inset-0 size-full object-cover" />
+        <img
+          src={resolved}
+          alt={alt}
+          className="absolute inset-0 size-full object-cover"
+          loading={priority ? "eager" : "lazy"}
+          referrerPolicy="no-referrer"
+        />
       </div>
     );
   }
@@ -49,12 +59,12 @@ export function ProductImage({
   return (
     <div className={cn("relative overflow-hidden bg-tdev-surface", className)}>
       <Image
-        src={src}
+        src={resolved}
         alt={alt}
         fill
         sizes={sizes}
         priority={priority}
-        unoptimized={src.startsWith("/")}
+        unoptimized={resolved.startsWith("/")}
         className="object-cover transition-transform duration-200 ease-out"
       />
     </div>
