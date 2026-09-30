@@ -1,4 +1,5 @@
 export const apiEndpoints = {
+  categories: "/api/v1/categories",
   products: "/api/v1/products",
   productBySlug: (slug: string) => `/api/v1/products/${encodeURIComponent(slug)}`,
   orders: "/api/v1/orders",

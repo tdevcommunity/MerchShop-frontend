@@ -1,14 +1,14 @@
 import Link from "next/link";
-import { CATEGORY_LABELS } from "@/features/catalog/utils";
 import { cn } from "@/lib/utils/cn";
-import { PRODUCT_CATEGORIES, type ProductCategory } from "@/types/catalog";
+import type { Category } from "@/types/catalog";
 
 type CategoryFilterProps = {
-  active?: ProductCategory;
+  categories: Category[];
+  active?: string;
   query?: string;
 };
 
-function hrefFor(category?: ProductCategory, query?: string): string {
+function hrefFor(category?: string, query?: string): string {
   const params = new URLSearchParams();
   if (category) {
     params.set("category", category);
@@ -20,19 +20,19 @@ function hrefFor(category?: ProductCategory, query?: string): string {
   return search ? `/shop?${search}` : "/shop";
 }
 
-export function CategoryFilter({ active, query }: CategoryFilterProps) {
+export function CategoryFilter({ categories, active, query }: CategoryFilterProps) {
   return (
     <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrer par catégorie">
       <FilterPill href={hrefFor(undefined, query)} selected={!active}>
         Tous
       </FilterPill>
-      {PRODUCT_CATEGORIES.map((category) => (
+      {categories.map((category) => (
         <FilterPill
-          key={category}
-          href={hrefFor(category, query)}
-          selected={active === category}
+          key={category.slug}
+          href={hrefFor(category.slug, query)}
+          selected={active === category.slug}
         >
-          {CATEGORY_LABELS[category]}
+          {category.label}
         </FilterPill>
       ))}
     </div>

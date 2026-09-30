@@ -4,7 +4,7 @@ import { HomeEssentials } from "@/features/catalog/components/home-essentials";
 import { HomeFeatured } from "@/features/catalog/components/home-featured";
 import { HomeHero } from "@/features/catalog/components/home-hero";
 import { HomeMarquee } from "@/features/catalog/components/home-marquee";
-import { listProducts } from "@/features/catalog/services/catalog-service";
+import { listProducts, listShopCategories } from "@/features/catalog/services/catalog-service";
 import { EmptyState } from "@/components/shared/empty-state";
 import { createMetadata } from "@/lib/seo/create-metadata";
 import { buttonClassName } from "@/components/ui/button";
@@ -16,7 +16,7 @@ export const metadata = createMetadata({
 });
 
 export default async function HomePage() {
-  const products = await listProducts();
+  const [products, categories] = await Promise.all([listProducts(), listShopCategories()]);
   const hero = products.find((product) => product.slug === "tshirt-tdev-core");
   const featured = products.find((product) => product.slug === "hoodie-tdev-night");
   const essentials = products.slice(0, 4);
@@ -41,7 +41,7 @@ export default async function HomePage() {
     <>
       <HomeHero product={hero ?? products[0]} />
       <HomeMarquee />
-      <HomeCategories products={products} />
+      <HomeCategories products={products} categories={categories} />
       <HomeFeatured product={featured ?? products[1] ?? products[0]} />
       <HomeEssentials products={essentials} />
       <HomeCtaBanner />

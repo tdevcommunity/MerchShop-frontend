@@ -4,8 +4,8 @@ import { ProductGallery } from "@/features/product/components/product-gallery";
 import { ProductPurchasePanel } from "@/features/product/components/product-purchase-panel";
 import { RelatedProducts } from "@/features/product/components/related-products";
 import { getProductBySlug } from "@/features/product/services/product-service";
-import { listProducts } from "@/features/catalog/services/catalog-service";
-import { CATEGORY_LABELS } from "@/features/catalog/utils";
+import { listProducts, listShopCategories } from "@/features/catalog/services/catalog-service";
+import { categoryLabel } from "@/features/catalog/utils";
 import { isNotFoundError } from "@/lib/api/errors";
 import { createMetadata } from "@/lib/seo/create-metadata";
 
@@ -40,9 +40,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
     throw error;
   }
 
-  const related = (await listProducts({ category: product.category }))
-    .filter((item) => item.id !== product.id)
-    .slice(0, 4);
+  const [relatedAll, categories] = await Promise.all([
+    listProducts({ category: product.category }),
+    listShopCategories(),
+  ]);
+  const related = relatedAll.filter((item) => item.id !== product.id).slice(0, 4);
 
   return (
     <div className="px-5 py-8 lg:px-12 lg:py-12">
@@ -55,7 +57,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           href={`/shop?category=${product.category}`}
           className="hover:text-tdev-anthracite"
         >
-          {CATEGORY_LABELS[product.category]}
+          {product.categoryLabel ?? categoryLabel(product.category, categories)}
         </Link>
         <span aria-hidden="true"> / </span>
         <span className="text-tdev-anthracite">{product.name}</span>
