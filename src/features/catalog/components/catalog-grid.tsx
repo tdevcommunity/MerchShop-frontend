@@ -1,5 +1,6 @@
 import { EmptyState } from "@/components/shared/empty-state";
 import { ProductCard } from "@/features/catalog/components/product-card";
+import { staggerDelay } from "@/lib/motion";
 import type { Product } from "@/types/catalog";
 
 type CatalogGridProps = {
@@ -19,7 +20,11 @@ export function CatalogGrid({ products }: CatalogGridProps) {
   return (
     <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {products.map((product, index) => (
-        <li key={product.id} className={index === 0 ? "sm:col-span-2 lg:col-span-2" : undefined}>
+        <li
+          key={product.id}
+          className={index === 0 ? "motion-enter sm:col-span-2 lg:col-span-2" : "motion-enter"}
+          style={{ animationDelay: staggerDelay(index) }}
+        >
           <ProductCard product={product} featured={index === 0} />
         </li>
       ))}

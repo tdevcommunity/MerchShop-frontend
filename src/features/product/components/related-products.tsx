@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ProductCard } from "@/features/catalog/components/product-card";
+import { staggerDelay } from "@/lib/motion";
 import type { Product } from "@/types/catalog";
 
 type RelatedProductsProps = {
@@ -25,8 +26,12 @@ export function RelatedProducts({ products }: RelatedProductsProps) {
         </Link>
       </div>
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {products.map((product) => (
-          <li key={product.id}>
+        {products.map((product, index) => (
+          <li
+            key={product.id}
+            className="motion-enter"
+            style={{ animationDelay: staggerDelay(index) }}
+          >
             <ProductCard product={product} />
           </li>
         ))}

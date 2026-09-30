@@ -67,6 +67,15 @@ export function InformationForm() {
         <CheckoutOrderSummary
           cart={cart}
           receptionNote={deliveryLabel(draft.deliveryMethod)}
+          receptionFree={draft.deliveryMethod === "pickup_event"}
+          action={
+            <CheckoutFooterBar
+              total={cart.subtotal}
+              actionLabel="Passer au paiement"
+              formId="checkout-information"
+              variant="sidebar"
+            />
+          }
         />
       }
       footer={
@@ -79,93 +88,64 @@ export function InformationForm() {
     >
       <form
         id="checkout-information"
-        className="flex flex-1 flex-col gap-5 lg:gap-8"
+        className="flex flex-1 flex-col gap-5 lg:gap-10"
         onSubmit={handleSubmit}
         noValidate
       >
-        <CheckoutStepIntro eyebrow="Étape 2 — Identité" title="Tes coordonnées">
-          On garde ça court. Juste l’essentiel pour te contacter.
+        <CheckoutStepIntro
+          eyebrow="Étape 2 — Identité"
+          index="02"
+          title="Tes coordonnées"
+        >
+          On garde ça court. Juste l&apos;essentiel pour sécuriser ton retrait et
+          tes justificatifs.
         </CheckoutStepIntro>
 
-        <div className="flex flex-1 flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-10">
-          <div className="flex flex-col gap-[18px] border border-tdev-anthracite bg-tdev-white p-4 lg:min-h-[380px] lg:p-8">
-            <div className="grid gap-3.5 sm:grid-cols-2">
-              <Input
-                name="firstName"
-                label="Prénom"
-                autoComplete="given-name"
-                value={draft.customer.firstName}
-                error={errors.firstName}
-                onChange={(event) =>
-                  update({
-                    customer: { ...draft.customer, firstName: event.target.value },
-                  })
-                }
-              />
-              <Input
-                name="lastName"
-                label="Nom"
-                autoComplete="family-name"
-                value={draft.customer.lastName}
-                error={errors.lastName}
-                onChange={(event) =>
-                  update({
-                    customer: { ...draft.customer, lastName: event.target.value },
-                  })
-                }
-              />
-            </div>
+        <div className="flex flex-col gap-4 lg:pt-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              name="email"
-              label="Email (optionnel)"
-              type="email"
-              autoComplete="email"
-              hint="Pour t’envoyer le reçu. Tu peux passer cette étape."
-              value={draft.customer.email}
-              error={errors.email}
+              name="firstName"
+              label="Prénom"
+              autoComplete="given-name"
+              value={draft.customer.firstName}
+              error={errors.firstName}
               onChange={(event) =>
                 update({
-                  customer: { ...draft.customer, email: event.target.value },
+                  customer: { ...draft.customer, firstName: event.target.value },
                 })
               }
             />
-            <p className="mt-auto text-xs text-tdev-muted">
-              Ces informations servent à la commande. Elles ne sont pas une preuve
-              de paiement.
-            </p>
+            <Input
+              name="lastName"
+              label="Nom"
+              autoComplete="family-name"
+              value={draft.customer.lastName}
+              error={errors.lastName}
+              onChange={(event) =>
+                update({
+                  customer: { ...draft.customer, lastName: event.target.value },
+                })
+              }
+            />
           </div>
-
-          <aside className="hidden border border-tdev-anthracite bg-tdev-white lg:flex lg:flex-col">
-            <p className="border-b border-tdev-border px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-tdev-muted">
-              À retenir
-            </p>
-            <dl>
-              <div className="border-b border-tdev-border px-6 py-5">
-                <dt className="text-[11px] font-bold uppercase tracking-[0.16em] text-tdev-muted">
-                  Réception
-                </dt>
-                <dd className="mt-1 font-headline text-lg font-extrabold">
-                  {deliveryLabel(draft.deliveryMethod)}
-                </dd>
-              </div>
-              <div className="border-b border-tdev-border px-6 py-5">
-                <dt className="text-[11px] font-bold uppercase tracking-[0.16em] text-tdev-muted">
-                  Email
-                </dt>
-                <dd className="mt-1 text-sm leading-relaxed">
-                  Optionnel. Utile pour le reçu digital.
-                </dd>
-              </div>
-              <div className="px-6 py-5">
-                <dt className="text-[11px] font-bold uppercase tracking-[0.16em] text-tdev-muted">
-                  Téléphone
-                </dt>
-                <dd className="mt-1 text-sm leading-relaxed">
-                  Demandé à l’étape paiement si tu choisis Mobile Money.
-                </dd>
-              </div>
-            </dl>
-          </aside>
+          <Input
+            name="email"
+            label="Email (optionnel)"
+            type="email"
+            autoComplete="email"
+            hint="Pour t’envoyer le reçu. Tu peux passer cette étape."
+            value={draft.customer.email}
+            error={errors.email}
+            onChange={(event) =>
+              update({
+                customer: { ...draft.customer, email: event.target.value },
+              })
+            }
+          />
+          <p className="flex items-start gap-2 pt-2 text-xs font-medium text-tdev-green">
+            Tes données sont chiffrées selon les standards de sécurité et ne sont
+            jamais partagées.
+          </p>
         </div>
       </form>
     </CheckoutShell>

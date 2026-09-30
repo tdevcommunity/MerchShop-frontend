@@ -34,7 +34,7 @@ export function buttonClassName(
   className?: string,
 ): string {
   return cn(
-    "inline-flex items-center justify-center gap-2 rounded-none font-medium transition-colors",
+    "motion-lift motion-press motion-icon-shift inline-flex items-center justify-center gap-2 rounded-none font-medium transition-colors",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-tdev-white",
     "disabled:pointer-events-none disabled:opacity-50",
     variantClass[variant],

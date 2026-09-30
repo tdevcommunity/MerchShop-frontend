@@ -6,7 +6,7 @@ export function HomeCtaBanner() {
   return (
     <section
       id="festival"
-      className="flex flex-col items-center justify-center gap-6 border-b border-tdev-anthracite bg-tdev-blue px-5 py-[72px] text-center"
+      className="motion-enter flex flex-col items-center justify-center gap-6 border-b border-tdev-anthracite bg-tdev-blue px-5 py-[72px] text-center"
     >
       <h2 className="font-headline text-4xl font-extrabold uppercase leading-[0.95] tracking-tight text-tdev-white lg:text-[56px]">
         Rejoins le mouvement

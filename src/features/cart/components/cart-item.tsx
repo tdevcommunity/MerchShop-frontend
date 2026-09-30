@@ -19,7 +19,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
   const { updateQuantity, removeItem } = useCartActions();
 
   return (
-    <article className="flex flex-col gap-4 border border-tdev-anthracite bg-tdev-white p-4 sm:flex-row">
+    <article className="motion-enter flex flex-col gap-4 border border-tdev-anthracite bg-tdev-white p-4 sm:flex-row">
       <div className="size-28 shrink-0 overflow-hidden border border-tdev-border sm:size-32">
         <ProductImage
           src={item.imageUrl}

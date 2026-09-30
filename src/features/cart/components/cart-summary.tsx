@@ -20,7 +20,10 @@ export function CartSummary({ cart }: CartSummaryProps) {
       </p>
       <p className="flex justify-between border-t border-tdev-border pt-3 text-base font-medium">
         <span>Sous-total estimé</span>
-        <span className="font-headline text-xl font-extrabold">
+        <span
+          key={cart.subtotal}
+          className="motion-pop inline-block font-headline text-xl font-extrabold"
+        >
           {formatMoney(cart.subtotal)}
         </span>
       </p>

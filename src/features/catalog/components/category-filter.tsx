@@ -53,6 +53,7 @@ function FilterPill({
       href={href}
       className={cn(
         "inline-flex min-h-11 items-center border px-4 text-sm font-semibold",
+        "transition-colors duration-150",
         selected
           ? "border-tdev-anthracite bg-tdev-anthracite text-tdev-white"
           : "border-tdev-anthracite bg-tdev-white text-tdev-anthracite hover:bg-tdev-surface",

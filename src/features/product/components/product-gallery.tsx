@@ -7,7 +7,10 @@ type ProductGalleryProps = {
 
 export function ProductGallery({ product }: ProductGalleryProps) {
   return (
-    <div className="border border-tdev-anthracite bg-tdev-surface">
+    <div
+      key={product.imageUrl ?? product.id}
+      className="motion-fade overflow-hidden border border-tdev-anthracite bg-tdev-surface"
+    >
       <ProductImage
         src={product.imageUrl}
         alt={product.name}

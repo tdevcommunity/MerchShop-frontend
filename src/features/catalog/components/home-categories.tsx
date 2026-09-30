@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRightIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/features/catalog/components/product-image";
 import { CATEGORY_LABELS } from "@/features/catalog/utils";
+import { staggerDelay } from "@/lib/motion";
 import { PRODUCT_CATEGORIES, type Product, type ProductCategory } from "@/types/catalog";
 
 type HomeCategoriesProps = {
@@ -23,11 +24,15 @@ export function HomeCategories({ products }: HomeCategoriesProps) {
         </Link>
       </div>
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {PRODUCT_CATEGORIES.map((category) => {
+        {PRODUCT_CATEGORIES.map((category, index) => {
           const count = products.filter((product) => product.category === category).length;
           const sample = products.find((product) => product.category === category);
           return (
-            <li key={category}>
+            <li
+              key={category}
+              className="motion-enter"
+              style={{ animationDelay: staggerDelay(index) }}
+            >
               <CategoryCard
                 category={category}
                 count={count}
@@ -53,7 +58,7 @@ function CategoryCard({
   return (
     <Link
       href={`/shop?category=${category}`}
-      className="relative block h-[240px] overflow-hidden border border-tdev-anthracite"
+      className="motion-img-zoom relative block h-[240px] overflow-hidden border border-tdev-anthracite"
     >
       <ProductImage
         src={imageUrl}

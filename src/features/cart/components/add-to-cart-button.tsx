@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { analyticsEvents } from "@/features/analytics/events";
 import { track } from "@/features/analytics/track";
@@ -21,10 +22,11 @@ export function AddToCartButton({
   disabled,
 }: AddToCartButtonProps) {
   const { addItem } = useCartActions();
+  const [added, setAdded] = useState(false);
   const isDisabled = disabled || !variant;
 
   function handleClick() {
-    if (!variant) {
+    if (!variant || added) {
       return;
     }
     addItem({
@@ -42,6 +44,8 @@ export function AddToCartButton({
       productId: product.id,
       variantId: variant.id,
     });
+    setAdded(true);
+    window.setTimeout(() => setAdded(false), 1400);
   }
 
   return (
@@ -50,8 +54,9 @@ export function AddToCartButton({
       className="w-full"
       onClick={handleClick}
       disabled={isDisabled}
+      aria-live="polite"
     >
-      Ajouter au panier
+      {added ? "Ajouté ✓" : "Ajouter au panier"}
     </Button>
   );
 }

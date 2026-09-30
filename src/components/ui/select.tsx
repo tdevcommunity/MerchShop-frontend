@@ -34,6 +34,7 @@ export function Select({
         aria-describedby={errorId}
         className={cn(
           "min-h-[50px] w-full rounded-none border bg-tdev-white px-3 text-tdev-anthracite",
+          "transition-[border-color,box-shadow] duration-150",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tdev-blue",
           error ? "border-tdev-orange" : "border-tdev-anthracite",
           className,

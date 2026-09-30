@@ -27,36 +27,42 @@ export function PickupQrCard({ qr, compact = false }: PickupQrCardProps) {
     );
   }
 
-  return (
-    <Card className="flex w-full flex-col items-center gap-4 p-6">
-      {compact ? null : (
-        <p className="text-sm text-tdev-muted">À présenter au stand Merch</p>
-      )}
+  const frame = (
+    <>
       {qr.imageUrl ? (
         // Image backend — pas de génération cryptographique côté client.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={qr.imageUrl}
           alt={qr.alt}
-          className="h-auto w-full max-w-xs bg-tdev-white p-3"
+          className="motion-qr h-auto w-full max-w-xs bg-tdev-white p-3"
         />
       ) : (
         <div
-          className="flex aspect-square w-full max-w-xs items-center justify-center bg-tdev-white p-4 text-center text-sm text-tdev-black"
+          className="motion-qr flex aspect-square w-[192px] max-w-full items-center justify-center bg-[#f5f5f3] p-4 text-center text-xs text-tdev-black"
           role="img"
           aria-label={qr.alt}
         >
           QR fourni par le backend
           <br />
-          (mock — image non générée ici)
+          (mock)
         </div>
       )}
-      {compact ? null : (
-        <p className="text-xs text-tdev-muted">
-          L&apos;affichage n&apos;est pas une preuve de validité. Le scan
-          Chantier 3B valide le pass côté serveur.
-        </p>
-      )}
+    </>
+  );
+
+  if (compact) {
+    return <div className="flex items-center justify-center">{frame}</div>;
+  }
+
+  return (
+    <Card className="flex w-full flex-col items-center gap-4 p-6">
+      <p className="text-sm text-tdev-muted">À présenter au stand Merch</p>
+      {frame}
+      <p className="text-xs text-tdev-muted">
+        L&apos;affichage n&apos;est pas une preuve de validité. Le scan
+        Chantier 3B valide le pass côté serveur.
+      </p>
     </Card>
   );
 }

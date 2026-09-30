@@ -44,6 +44,7 @@ export function PaymentForm() {
   const router = useRouter();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [card, setCard] = useState<CardDetailsInput>(emptyCard);
+  const [paying, setPaying] = useState(false);
 
   if (cart.items.length === 0) {
     return <EmptyCheckout />;
@@ -91,6 +92,9 @@ export function PaymentForm() {
 
   function pay(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (paying) {
+      return;
+    }
     const fields = { ...validatePayment(draft) };
     if (draft.paymentMethod === "card") {
       Object.assign(fields, validateCardDetails(card));
@@ -99,6 +103,7 @@ export function PaymentForm() {
     if (Object.keys(fields).length > 0) {
       return;
     }
+    setPaying(true);
     track(analyticsEvents.paymentStarted, { itemCount: cart.itemCount });
     router.push("/checkout/processing");
   }
@@ -133,43 +138,61 @@ export function PaymentForm() {
       stepIndex={3}
       current="payment"
       backHref="/checkout/information"
-      summary={<CheckoutOrderSummary cart={cart} />}
+      summary={
+        <CheckoutOrderSummary
+          cart={cart}
+          receptionNote={deliveryLabel(draft.deliveryMethod)}
+          receptionFree={draft.deliveryMethod === "pickup_event"}
+          action={
+            <CheckoutFooterBar
+              total={cart.subtotal}
+              actionLabel={
+                paying ? "Paiement en cours..." : `Payer ${formatMoney(cart.subtotal)}`
+              }
+              loading={paying}
+              formId="checkout-payment"
+              variant="sidebar"
+            />
+          }
+        />
+      }
       footer={
         <CheckoutFooterBar
           total={cart.subtotal}
-          actionLabel={`Payer ${formatMoney(cart.subtotal)}`}
+          actionLabel={
+            paying ? "Paiement en cours..." : `Payer ${formatMoney(cart.subtotal)}`
+          }
+          loading={paying}
           formId="checkout-payment"
         />
       }
     >
       <form
         id="checkout-payment"
-        className="flex flex-1 flex-col gap-5 lg:gap-8"
+        className="flex flex-1 flex-col gap-5 lg:gap-10"
         onSubmit={pay}
         noValidate
       >
-        <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)] lg:items-start lg:gap-8">
-          <div className="order-2 lg:order-1">
-            <CheckoutStepIntro eyebrow="Étape 3 — Paiement" title="Comment tu paies ?">
-              Choisis un moyen. Les champs s’affichent ensuite, sans empiler
-              tout le formulaire.
-            </CheckoutStepIntro>
-          </div>
-          <div className="order-1 bg-tdev-anthracite px-[22px] py-5 text-tdev-white lg:order-2 lg:min-w-[17rem] lg:px-6 lg:py-6">
-            <p className="text-xs font-bold uppercase tracking-[1.8px] text-[#9a9a9a]">
-              Montant à payer
-            </p>
-            <p className="font-headline text-[42px] font-extrabold leading-[1.05] text-tdev-yellow lg:text-[2rem] lg:leading-none">
-              {formatMoney(cart.subtotal)}
-            </p>
-            <p className="pt-1.5 text-[13px] font-medium text-[#c5c5c5]">
-              {cart.itemCount} article{cart.itemCount > 1 ? "s" : ""} ·{" "}
-              {deliveryLabel(draft.deliveryMethod)}
-            </p>
-            <p className="mt-2 text-[11px] text-[#9a9a9a]">
-              Montant indicatif. Le total définitif est calculé par le backend.
-            </p>
-          </div>
+        <CheckoutStepIntro
+          eyebrow="Étape 3 — Paiement"
+          index="02"
+          title="Comment tu paies ?"
+        >
+          Choisis un moyen. Les champs s&apos;affichent ensuite, sans empiler
+          tout le formulaire.
+        </CheckoutStepIntro>
+
+        <div className="bg-tdev-anthracite px-[22px] py-5 text-tdev-white lg:hidden">
+          <p className="text-xs font-bold uppercase tracking-[1.8px] text-[#9a9a9a]">
+            Montant à payer
+          </p>
+          <p className="font-headline text-[42px] font-extrabold leading-[1.05] text-tdev-yellow">
+            {formatMoney(cart.subtotal)}
+          </p>
+          <p className="pt-1.5 text-[13px] font-medium text-[#c5c5c5]">
+            {cart.itemCount} article{cart.itemCount > 1 ? "s" : ""} ·{" "}
+            {deliveryLabel(draft.deliveryMethod)}
+          </p>
         </div>
 
         <fieldset className="flex flex-col gap-3">
@@ -178,18 +201,18 @@ export function PaymentForm() {
             Moyen de paiement
           </p>
 
-          <div className="grid gap-3 lg:grid-cols-2 lg:gap-5">
+          <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
             <PaymentTile
               selected={mobileSelected}
               onSelect={() => selectMethod("mobile_money")}
               icon={
-                <span className="flex size-[42px] items-center justify-center bg-tdev-blue text-tdev-yellow lg:size-14">
-                  <PhoneIcon className="size-5 lg:size-6" />
+                <span className="flex size-[42px] items-center justify-center bg-tdev-blue text-tdev-yellow lg:size-10">
+                  <PhoneIcon className="size-5" />
                 </span>
               }
               title="Mobile Money"
               badge={
-                <span className="text-xs font-bold text-tdev-green">
+                <span className="bg-tdev-green px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.275px] text-tdev-white">
                   Instantané
                 </span>
               }
@@ -200,13 +223,13 @@ export function PaymentForm() {
               selected={cardSelected}
               onSelect={() => selectMethod("card")}
               icon={
-                <span className="flex size-[42px] items-center justify-center bg-tdev-anthracite text-tdev-white lg:size-14">
-                  <CreditCardIcon className="size-5 lg:size-6" />
+                <span className="flex size-[42px] items-center justify-center bg-tdev-anthracite text-tdev-white lg:size-10">
+                  <CreditCardIcon className="size-5" />
                 </span>
               }
               title="Carte bancaire"
               badge={
-                <span className="text-xs font-semibold text-tdev-muted">
+                <span className="bg-[#f0f0ee] px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.275px]">
                   Visa / Mastercard
                 </span>
               }
@@ -215,7 +238,7 @@ export function PaymentForm() {
           </div>
 
           {mobileSelected ? (
-            <section className="border border-tdev-anthracite bg-tdev-white p-4 lg:p-8">
+            <section className="motion-panel border border-tdev-anthracite bg-tdev-white p-4 lg:p-8">
               <p className="hidden text-xs font-bold uppercase tracking-[0.2em] text-tdev-muted lg:block">
                 Détails Mobile Money
               </p>
@@ -224,7 +247,7 @@ export function PaymentForm() {
           ) : null}
 
           {cardSelected ? (
-            <section className="border border-tdev-anthracite bg-tdev-white p-4 lg:p-8">
+            <section className="motion-panel border border-tdev-anthracite bg-tdev-white p-4 lg:p-8">
               <p className="hidden text-xs font-bold uppercase tracking-[0.2em] text-tdev-muted lg:block">
                 Détails de la carte
               </p>
@@ -406,38 +429,40 @@ function PaymentTile({
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        "flex flex-col border-2 bg-tdev-white text-left transition-colors",
-        "lg:min-h-[200px] lg:hover:border-tdev-blue",
-        selected ? "border-tdev-blue" : "border-tdev-anthracite",
+        "relative flex flex-col border-2 bg-tdev-white text-left transition-colors duration-150",
+        "lg:min-h-[220px] lg:justify-between lg:p-5 lg:hover:border-tdev-blue",
+        selected
+          ? "border-tdev-blue lg:bg-[#f8faff] lg:shadow-[3px_3px_0_#155dfc]"
+          : "border-tdev-anthracite lg:opacity-80",
       )}
     >
       <span
         className={cn(
-          "flex items-center gap-3 px-[18px] py-4 lg:px-6 lg:py-5",
-          selected ? "bg-[#eef4ff]" : "",
+          "flex items-center gap-3 px-[18px] py-4 lg:flex-col lg:items-start lg:gap-[7px] lg:p-0",
+          selected ? "bg-[#eef4ff] lg:bg-transparent" : "",
         )}
       >
         {icon}
-        <span className="flex-1">
-          <span className="block font-headline text-[17px] font-extrabold uppercase lg:text-xl">
+        <span className="flex-1 lg:pt-[5px]">
+          <span className="block font-headline text-[17px] font-extrabold uppercase lg:text-lg">
             {title}
           </span>
-          {badge}
+          <span className="mt-1 inline-flex lg:mt-0">{badge}</span>
         </span>
         <span
           className={cn(
-            "flex size-6 items-center justify-center lg:size-7",
+            "flex size-6 items-center justify-center lg:absolute lg:top-[18px] lg:right-[18px] lg:size-5",
             selected
               ? "bg-tdev-blue text-tdev-white"
-              : "border-2 border-[#c5c5c5]",
+              : "border-2 border-[#c5c5c5] lg:hidden",
           )}
         >
-          {selected ? <CheckIcon className="size-[15px]" /> : null}
+          {selected ? <CheckIcon className="size-[15px] lg:size-3.5" /> : null}
         </span>
       </span>
       <span
         className={cn(
-          "px-[18px] pb-4 text-[13px] leading-relaxed text-tdev-subtle lg:flex-1 lg:px-6 lg:pb-6 lg:pt-0 lg:text-sm",
+          "px-[18px] pb-4 text-[13px] leading-relaxed text-tdev-subtle lg:p-0 lg:pt-1 lg:text-xs",
           selected ? "block" : "hidden lg:block",
         )}
       >

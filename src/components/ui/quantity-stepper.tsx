@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MAX_LINE_QUANTITY } from "@/features/cart/utils";
+import { cn } from "@/lib/utils/cn";
 
 type QuantityStepperProps = {
   id?: string;
@@ -20,6 +22,19 @@ export function QuantityStepper({
   onChange,
   label,
 }: QuantityStepperProps) {
+  const [pulse, setPulse] = useState(false);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    setPulse(true);
+    const timer = window.setTimeout(() => setPulse(false), 180);
+    return () => window.clearTimeout(timer);
+  }, [value]);
+
   return (
     <div className="flex items-center border border-tdev-anthracite">
       <Button
@@ -40,7 +55,10 @@ export function QuantityStepper({
         value={value}
         aria-label={label}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="h-11 w-12 border-x border-tdev-anthracite bg-tdev-white text-center tabular-nums"
+        className={cn(
+          "h-11 w-12 border-x border-tdev-anthracite bg-tdev-white text-center tabular-nums",
+          pulse && "motion-pop",
+        )}
       />
       <Button
         variant="ghost"

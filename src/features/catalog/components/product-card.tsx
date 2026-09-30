@@ -25,8 +25,8 @@ export function ProductCard({ product, featured = false }: ProductCardProps) {
         featured && "lg:col-span-2",
       )}
     >
-      <Link href={`/shop/${product.slug}`} className="flex h-full flex-col">
-        <div className="relative border-b border-tdev-anthracite bg-tdev-surface">
+      <Link href={`/shop/${product.slug}`} className="motion-img-zoom flex h-full flex-col">
+        <div className="relative overflow-hidden border-b border-tdev-anthracite bg-tdev-surface">
           <ProductImage
             src={product.imageUrl}
             alt={product.name}
@@ -51,7 +51,7 @@ export function ProductCard({ product, featured = false }: ProductCardProps) {
             </p>
           </div>
           <span
-            className="flex size-9 shrink-0 items-center justify-center bg-tdev-blue text-tdev-white"
+            className="motion-zoom-target flex size-9 shrink-0 items-center justify-center bg-tdev-blue text-tdev-white transition-transform duration-200"
             aria-hidden="true"
           >
             <CartIcon className="size-4" />

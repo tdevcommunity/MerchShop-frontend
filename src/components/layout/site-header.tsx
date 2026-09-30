@@ -58,7 +58,7 @@ export function SiteHeader() {
                 key={item.label}
                 href={item.href}
                 className={cn(
-                  "min-h-11 text-sm",
+                  "min-h-11 text-sm transition-colors duration-150",
                   isBoutique
                     ? "font-semibold text-tdev-anthracite"
                     : "font-medium text-tdev-muted hover:text-tdev-anthracite",
@@ -73,7 +73,7 @@ export function SiteHeader() {
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-4">
           <button
             type="button"
-            className="flex size-10 items-center justify-center border border-tdev-anthracite lg:hidden"
+            className="motion-press flex size-10 items-center justify-center border border-tdev-anthracite transition-colors duration-150 hover:bg-tdev-surface lg:hidden"
             aria-expanded={menuOpen}
             aria-controls="mobile-nav"
             onClick={() => {
@@ -93,7 +93,7 @@ export function SiteHeader() {
 
           <button
             type="button"
-            className="flex size-10 items-center justify-center border border-tdev-anthracite"
+            className="motion-press flex size-10 items-center justify-center border border-tdev-anthracite transition-colors duration-150 hover:bg-tdev-surface"
             aria-expanded={searchOpen}
             aria-controls="site-search"
             onClick={() => {
@@ -107,13 +107,16 @@ export function SiteHeader() {
 
           <Link
             href="/cart"
-            className="flex h-10 items-center gap-2 bg-tdev-anthracite px-3.5 text-[13px] font-semibold text-tdev-white"
+            className="motion-press flex h-10 items-center gap-2 bg-tdev-anthracite px-3.5 text-[13px] font-semibold text-tdev-white transition-colors duration-150 hover:bg-[#2a2d2c]"
             aria-label={`Panier, ${cart.itemCount} article${cart.itemCount > 1 ? "s" : ""}`}
           >
             <CartIcon className="size-[18px] text-tdev-yellow" />
             <span className="hidden sm:inline">Panier</span>
             {cart.itemCount > 0 ? (
-              <span className="flex size-5 items-center justify-center bg-tdev-orange text-xs font-bold">
+              <span
+                key={cart.itemCount}
+                className="motion-pop flex size-5 items-center justify-center bg-tdev-orange text-xs font-bold"
+              >
                 {cart.itemCount}
               </span>
             ) : null}
@@ -125,7 +128,7 @@ export function SiteHeader() {
         <form
           id="site-search"
           onSubmit={handleSearch}
-          className="flex gap-2 border-t border-tdev-anthracite px-5 py-3 lg:px-12"
+          className="motion-panel flex gap-2 border-t border-tdev-anthracite px-5 py-3 lg:px-12"
         >
           <label htmlFor="header-query" className="sr-only">
             Rechercher un produit
@@ -148,7 +151,7 @@ export function SiteHeader() {
         <nav
           id="mobile-nav"
           aria-label="Navigation mobile"
-          className="flex flex-col border-t border-tdev-anthracite lg:hidden"
+          className="motion-panel flex flex-col border-t border-tdev-anthracite lg:hidden"
         >
           {nav.map((item) => (
             <Link

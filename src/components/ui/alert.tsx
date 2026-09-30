@@ -20,7 +20,12 @@ export function Alert({ title, children, tone = "info", className }: AlertProps)
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
-      className={cn("rounded-none border px-4 py-3", toneClass[tone], className)}
+      className={cn(
+        "motion-enter rounded-none border px-4 py-3",
+        tone === "error" && "motion-shake",
+        toneClass[tone],
+        className,
+      )}
     >
       <p className="font-medium">{title}</p>
       {children ? (

@@ -137,7 +137,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
                 aria-label={item}
                 onClick={() => selectColor(item)}
                 className={cn(
-                  "size-11 border-2",
+                  "size-11 border-2 transition-colors duration-150",
                   colorSwatchClass(item),
                   item === color ? "border-tdev-blue" : "border-tdev-anthracite",
                 )}
@@ -167,7 +167,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
                   disabled={!available}
                   onClick={() => selectSize(item)}
                   className={cn(
-                    "min-h-11 min-w-11 border px-3 text-sm font-bold",
+                    "min-h-11 min-w-11 border px-3 text-sm font-bold transition-colors duration-150",
                     isSelected
                       ? "border-tdev-anthracite bg-tdev-anthracite text-tdev-white"
                       : "border-tdev-anthracite bg-tdev-white",
