@@ -37,11 +37,29 @@ export type AdminUser = {
   active: boolean;
 };
 
+export type AdminUserPublic = {
+  id: string;
+  email: string;
+  name: string;
+  role: AdminRole;
+  active: boolean;
+};
+
+export type AdminInviteResult = {
+  user: AdminUserPublic;
+  temporaryPassword: string;
+};
+
 export type AdminSessionUser = {
   id: string;
   email: string;
   name: string;
   role: AdminRole;
+};
+
+export const ADMIN_ROLE_LABELS: Record<AdminRole, string> = {
+  admin: "Admin",
+  staff: "Staff",
 };
 
 export type AdminCategory = {
@@ -137,6 +155,8 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 };
 
 export type DashboardSnapshot = {
+  from: string;
+  to: string;
   revenue: number;
   orders: number;
   paidOrders: number;

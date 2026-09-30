@@ -72,9 +72,9 @@ export default function AdminPaymentsPage() {
                 <tr key={payment.id} className="border-t border-tdev-border">
                   <td className="p-3 font-medium">{payment.providerRef ?? payment.id}</td>
                   <td className="p-3">
-                    <Link href={`/admin/orders/${payment.orderId}`} className="underline">
-                      {payment.orderId}
-                    </Link>
+                  <Link href={`/admin/orders?order=${payment.orderId}`} className="underline">
+                    {payment.orderId}
+                  </Link>
                   </td>
                   <td className="p-3">{payment.customerName}</td>
                   <td className="p-3">{formatMoney(payment.amount)}</td>

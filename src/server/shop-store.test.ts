@@ -1,15 +1,21 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { ORDER_TRANSITIONS } from "@/types/admin";
 import type { Order } from "@/types/order";
+import { verifyPassword } from "./password";
 import {
   adjustInventory,
   changeOrderStatus,
   createProduct,
   findPublishedProduct,
+  findUserByEmail,
+  inviteAdminUser,
+  listAdminUsers,
   listInventoryLogs,
   listPublishedProducts,
   recordPaidOrder,
+  resetAdminUserPassword,
   resetShopStore,
+  updateAdminUser,
   updateProduct,
   validatePickup,
 } from "./shop-store";
@@ -79,6 +85,42 @@ describe("shop-store catalogue", () => {
 
     expect(findPublishedProduct(product.slug)?.name).toBe("Tote TDEV Audit");
     expect(listPublishedProducts().some((item) => item.slug === product.slug)).toBe(true);
+  });
+
+  it("expose une image par couleur sur le produit public", () => {
+    const product = createProduct(admin, {
+      name: "Cap TDEV Couleurs",
+      slug: "cap-tdev-couleurs",
+      description: "Casquette test couleurs",
+      category: "accessories",
+      status: "published",
+      variants: [
+        {
+          size: null,
+          color: "Noir",
+          sku: "CAP-COLOR-BLK",
+          stockQuantity: 5,
+          unitPrice: 7000,
+          imageUrl: "https://cdn.example/cap-noir.jpg",
+        },
+        {
+          size: null,
+          color: "Blanc",
+          sku: "CAP-COLOR-WHT",
+          stockQuantity: 5,
+          unitPrice: 7000,
+          imageUrl: "https://cdn.example/cap-blanc.jpg",
+        },
+      ],
+    });
+
+    const published = findPublishedProduct(product.slug);
+    expect(published?.variants.find((variant) => variant.color === "Noir")?.imageUrl).toBe(
+      "https://cdn.example/cap-noir.jpg",
+    );
+    expect(published?.variants.find((variant) => variant.color === "Blanc")?.imageUrl).toBe(
+      "https://cdn.example/cap-blanc.jpg",
+    );
   });
 
   it("refuse un SKU déjà utilisé", () => {
@@ -164,5 +206,57 @@ describe("shop-store commandes", () => {
     changeOrderStatus(admin, "ord_test_1", "ready_for_pickup");
     validatePickup(admin, "ord_test_1");
     expect(() => validatePickup(admin, "ord_test_1")).toThrow(/déjà été retirée/);
+  });
+});
+
+describe("shop-store utilisateurs", () => {
+  beforeEach(() => {
+    resetShopStore();
+  });
+
+  it("invite un staff avec un mot de passe temporaire utilisable", () => {
+    const result = inviteAdminUser(admin, {
+      email: "ops@tdev.tg",
+      name: "Ops Stand",
+      role: "staff",
+    });
+
+    expect(result.user.role).toBe("staff");
+    expect(result.temporaryPassword.startsWith("Tdev-")).toBe(true);
+    expect(listAdminUsers().some((user) => user.email === "ops@tdev.tg")).toBe(true);
+
+    const stored = findUserByEmail("ops@tdev.tg");
+    expect(stored).toBeDefined();
+    expect(verifyPassword(result.temporaryPassword, stored!.passwordHash)).toBe(true);
+  });
+
+  it("attribue un rôle et refuse de retirer le dernier admin", () => {
+    const invited = inviteAdminUser(admin, {
+      email: "lead@tdev.tg",
+      name: "Lead",
+      role: "admin",
+    });
+
+    updateAdminUser(admin, "usr_staff", { role: "admin" });
+    expect(listAdminUsers().find((user) => user.id === "usr_staff")?.role).toBe("admin");
+
+    updateAdminUser(admin, invited.user.id, { role: "staff" });
+    updateAdminUser(admin, "usr_staff", { role: "staff" });
+
+    expect(() => updateAdminUser(admin, "usr_admin", { role: "staff" })).toThrow(
+      /au moins un admin/,
+    );
+  });
+
+  it("régénère un mot de passe temporaire", () => {
+    const first = inviteAdminUser(admin, {
+      email: "desk@tdev.tg",
+      name: "Desk",
+      role: "staff",
+    });
+    const second = resetAdminUserPassword(admin, first.user.id);
+    const stored = findUserByEmail("desk@tdev.tg");
+    expect(verifyPassword(first.temporaryPassword, stored!.passwordHash)).toBe(false);
+    expect(verifyPassword(second.temporaryPassword, stored!.passwordHash)).toBe(true);
   });
 });

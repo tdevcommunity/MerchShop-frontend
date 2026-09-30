@@ -3,6 +3,7 @@ import { apiEndpoints } from "@/lib/api/endpoints";
 import { NotFoundError } from "@/lib/api/errors";
 import { useMockApi } from "@/lib/config/env";
 import type { CatalogFilters, Category, Product } from "@/types/catalog";
+import { filterProductsByQuery } from "@/features/catalog/utils/search";
 import {
   findPublishedProduct,
   listPublicCategories,
@@ -23,16 +24,11 @@ export async function listProducts(
     ? listPublishedProducts()
     : await apiRequest<Product[]>(apiEndpoints.products);
 
-  return products.filter((product) => {
-    if (filters.category && product.category !== filters.category) {
-      return false;
-    }
-    if (filters.query) {
-      const query = filters.query.toLowerCase();
-      return product.name.toLowerCase().includes(query);
-    }
-    return true;
-  });
+  const byCategory = filters.category
+    ? products.filter((product) => product.category === filters.category)
+    : products;
+
+  return filterProductsByQuery(byCategory, filters.query ?? "");
 }
 
 export async function getProductBySlug(slug: string): Promise<Product> {

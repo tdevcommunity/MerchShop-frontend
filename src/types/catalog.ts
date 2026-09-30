@@ -17,6 +17,8 @@ export type ProductVariant = {
   color: string | null;
   /** Teinte libre (hex) si la couleur n'est pas dans la palette Shop. */
   colorHex?: string | null;
+  /** Visuel de la couleur — partagé par toutes les tailles de cette teinte. */
+  imageUrl?: string | null;
   sku: string;
   /** Stock serveur — le frontend ne doit pas en déduire une vente certaine. */
   stockQuantity: number;

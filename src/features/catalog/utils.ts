@@ -82,6 +82,22 @@ export function colorSwatchStyle(
   return undefined;
 }
 
+/** Image liée à une couleur, sinon image principale du produit. */
+export function productImageForColor(
+  product: Product,
+  color: string | null | undefined,
+): string | null {
+  if (color) {
+    const match = product.variants.find(
+      (variant) => variant.color === color && variant.imageUrl,
+    );
+    if (match?.imageUrl) {
+      return match.imageUrl;
+    }
+  }
+  return product.imageUrl;
+}
+
 export function countByCategory(
   products: Product[],
   category: string,

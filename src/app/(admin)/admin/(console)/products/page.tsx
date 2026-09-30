@@ -69,8 +69,10 @@ export default function AdminProductsPage() {
         title="Produits"
         description="Le catalogue publié alimente directement le Shop public."
         actions={
-          <Link href="/admin/products/new">
-            <Button variant="brand">Nouveau produit</Button>
+          <Link href="/admin/products/new" className="w-full sm:w-auto">
+            <Button variant="brand" className="w-full sm:w-auto">
+              Nouveau produit
+            </Button>
           </Link>
         }
       />

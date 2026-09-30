@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
     <div className="flex min-h-dvh items-center justify-center bg-tdev-anthracite px-5">
       <form
         onSubmit={submit}
-        className="w-full max-w-md border border-[#33383a] bg-tdev-white p-8 shadow-[8px_8px_0_#155dfc]"
+        className="w-full max-w-md border border-[#33383a] bg-tdev-white p-5 shadow-[8px_8px_0_#155dfc] sm:p-8"
       >
         <BrandMark />
         <h1 className="mt-6 font-headline text-3xl font-extrabold uppercase">

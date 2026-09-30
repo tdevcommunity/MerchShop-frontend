@@ -1,5 +1,9 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils/cn";
+import {
+  isRemoteProductImage,
+  resolveProductImageSrc,
+} from "@/features/catalog/utils/image-src";
 
 type ProductImageProps = {
   src: string | null;
@@ -33,14 +37,34 @@ export function ProductImage({
     );
   }
 
+  const resolved = resolveProductImageSrc(src);
+
+  // URLs admin libres (Drive, data URL, CDN non whitelisté) : <img> natif.
+  // next/image reste pour les assets locaux une fois le CDN produit configuré.
+  if (isRemoteProductImage(resolved)) {
+    return (
+      <div className={cn("relative overflow-hidden bg-tdev-surface", className)}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={resolved}
+          alt={alt}
+          className="absolute inset-0 size-full object-cover"
+          loading={priority ? "eager" : "lazy"}
+          referrerPolicy="no-referrer"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={cn("relative overflow-hidden bg-tdev-surface", className)}>
       <Image
-        src={src}
+        src={resolved}
         alt={alt}
         fill
         sizes={sizes}
         priority={priority}
+        unoptimized={resolved.startsWith("/")}
         className="object-cover transition-transform duration-200 ease-out"
       />
     </div>
