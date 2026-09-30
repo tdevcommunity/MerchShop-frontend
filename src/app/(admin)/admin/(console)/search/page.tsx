@@ -69,7 +69,7 @@ function SearchResults() {
             <ul className="mt-3 space-y-2 text-sm">
               {result.orders.map((order) => (
                 <li key={order.id}>
-                  <Link href={`/admin/orders/${order.id}`} className="underline">
+                  <Link href={`/admin/orders?order=${order.id}`} className="underline">
                     {order.reference} · {order.customer.lastName}
                   </Link>
                 </li>

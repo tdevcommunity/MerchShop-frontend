@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils/cn";
+import { statusLabel } from "@/features/admin/labels";
 
 const TONES: Record<string, string> = {
   published: "bg-tdev-green text-tdev-white",
@@ -16,12 +17,17 @@ const TONES: Record<string, string> = {
   payment_failed: "bg-tdev-orange text-tdev-white",
   cancelled: "bg-[#f0f0ee] text-tdev-muted",
   refunded: "bg-tdev-orange text-tdev-white",
+  expired: "bg-[#f0f0ee] text-tdev-muted",
+  shipped: "bg-tdev-blue text-tdev-white",
+  unknown: "bg-[#f0f0ee] text-tdev-muted",
   available: "bg-tdev-green text-tdev-white",
   low: "bg-tdev-yellow text-tdev-anthracite",
   out: "bg-tdev-orange text-tdev-white",
   disabled: "bg-[#f0f0ee] text-tdev-muted",
   active: "bg-tdev-green text-tdev-white",
   inactive: "bg-[#f0f0ee] text-tdev-muted",
+  admin: "bg-tdev-blue text-tdev-white",
+  staff: "bg-tdev-anthracite text-tdev-white",
 };
 
 type StatusBadgeProps = {
@@ -36,7 +42,7 @@ export function StatusBadge({ value }: StatusBadgeProps) {
         TONES[value] ?? "bg-[#f0f0ee] text-tdev-anthracite",
       )}
     >
-      {value.replaceAll("_", " ")}
+      {statusLabel(value)}
     </span>
   );
 }

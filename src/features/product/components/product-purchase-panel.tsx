@@ -18,13 +18,19 @@ import type { Product, ProductVariant, TextileSize } from "@/types/catalog";
 
 type ProductPurchasePanelProps = {
   product: Product;
+  color: string | null;
+  onColorChange: (color: string) => void;
 };
 
 function uniqueValues<T extends string>(values: Array<T | null>): T[] {
   return [...new Set(values.filter((value): value is T => Boolean(value)))];
 }
 
-export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
+export function ProductPurchasePanel({
+  product,
+  color,
+  onColorChange,
+}: ProductPurchasePanelProps) {
   const colors = useMemo(
     () => uniqueValues(product.variants.map((variant) => variant.color)),
     [product.variants],
@@ -35,9 +41,6 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   );
 
   const firstAvailable = product.variants.find((variant) => variant.stockQuantity > 0);
-  const [color, setColor] = useState<string | null>(
-    firstAvailable?.color ?? colors[0] ?? null,
-  );
   const [size, setSize] = useState<TextileSize | null>(
     firstAvailable?.size ?? allSizes[0] ?? null,
   );
@@ -65,19 +68,21 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   }, [allSizes.length, color, colors.length, product.variants, size]);
 
   function selectColor(nextColor: string) {
-    setColor(nextColor);
+    onColorChange(nextColor);
     const nextSizes = uniqueValues(
       product.variants
         .filter((variant) => variant.color === nextColor)
         .map((variant) => variant.size),
     );
-    if (size && !nextSizes.includes(size)) {
-      setSize(nextSizes[0] ?? null);
+    const nextSize =
+      size && nextSizes.includes(size) ? size : (nextSizes[0] ?? null);
+    if (size !== nextSize) {
+      setSize(nextSize);
     }
     const nextVariant = product.variants.find(
       (variant) =>
         variant.color === nextColor &&
-        (nextSizes.length === 0 || variant.size === (nextSizes.includes(size as TextileSize) ? size : nextSizes[0])),
+        (nextSizes.length === 0 || variant.size === nextSize),
     );
     if (nextVariant) {
       track(analyticsEvents.productVariantSelected, {

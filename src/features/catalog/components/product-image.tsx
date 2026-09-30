@@ -9,6 +9,10 @@ type ProductImageProps = {
   priority?: boolean;
 };
 
+function isInlineImage(src: string) {
+  return src.startsWith("data:") || src.startsWith("blob:");
+}
+
 export function ProductImage({
   src,
   alt,
@@ -33,6 +37,15 @@ export function ProductImage({
     );
   }
 
+  if (isInlineImage(src)) {
+    return (
+      <div className={cn("relative overflow-hidden bg-tdev-surface", className)}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={src} alt={alt} className="absolute inset-0 size-full object-cover" />
+      </div>
+    );
+  }
+
   return (
     <div className={cn("relative overflow-hidden bg-tdev-surface", className)}>
       <Image
@@ -41,6 +54,7 @@ export function ProductImage({
         fill
         sizes={sizes}
         priority={priority}
+        unoptimized={src.startsWith("/")}
         className="object-cover transition-transform duration-200 ease-out"
       />
     </div>

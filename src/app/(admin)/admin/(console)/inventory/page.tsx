@@ -1,11 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
 import { adminRequest } from "@/features/admin/services/admin-client";
+import { cn } from "@/lib/utils/cn";
 import { INVENTORY_REASONS, type InventoryLog, type InventoryReason } from "@/types/admin";
 
 type InventoryRow = {
@@ -33,16 +34,26 @@ const REASON_LABEL: Record<InventoryReason, string> = {
   sale: "Vente",
 };
 
+function variantLabel(row: InventoryRow) {
+  const details = [row.size, row.color].filter(Boolean).join(" / ");
+  return details
+    ? `${row.productName} · ${details} · ${row.sku}`
+    : `${row.productName} · ${row.sku}`;
+}
+
 export default function AdminInventoryPage() {
   const [rows, setRows] = useState<InventoryRow[] | null>(null);
   const [logs, setLogs] = useState<InventoryLog[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [variantId, setVariantId] = useState("");
+  const [variantSearch, setVariantSearch] = useState("");
+  const [variantOpen, setVariantOpen] = useState(false);
   const [delta, setDelta] = useState("10");
   const [reason, setReason] = useState<InventoryReason>("reception");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const variantBoxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void Promise.all([
@@ -56,6 +67,16 @@ export default function AdminInventoryPage() {
       .catch((loadError: Error) => setError(loadError.message));
   }, []);
 
+  useEffect(() => {
+    function onPointerDown(event: MouseEvent) {
+      if (!variantBoxRef.current?.contains(event.target as Node)) {
+        setVariantOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, []);
+
   async function load() {
     const [inventory, history] = await Promise.all([
       adminRequest<InventoryRow[]>("/api/admin/inventory"),
@@ -63,7 +84,29 @@ export default function AdminInventoryPage() {
     ]);
     setRows(inventory);
     setLogs(history);
+    return inventory;
   }
+
+  const selectedVariant = useMemo(
+    () => (rows ?? []).find((row) => row.variantId === variantId) ?? null,
+    [rows, variantId],
+  );
+
+  const variantMatches = useMemo(() => {
+    const list = rows ?? [];
+    const q = variantSearch.trim().toLowerCase();
+    if (!q) {
+      return list.slice(0, 12);
+    }
+    return list
+      .filter((row) =>
+        [row.productName, row.sku, row.color ?? "", row.size ?? "", row.variantId]
+          .join(" ")
+          .toLowerCase()
+          .includes(q),
+      )
+      .slice(0, 12);
+  }, [rows, variantSearch]);
 
   const filtered = useMemo(() => {
     const list = rows ?? [];
@@ -75,6 +118,18 @@ export default function AdminInventoryPage() {
       [row.productName, row.sku, row.color ?? "", row.size ?? ""].join(" ").toLowerCase().includes(q),
     );
   }, [rows, query]);
+
+  function selectVariant(row: InventoryRow) {
+    setVariantId(row.variantId);
+    setVariantSearch(variantLabel(row));
+    setVariantOpen(false);
+  }
+
+  function clearVariant() {
+    setVariantId("");
+    setVariantSearch("");
+    setVariantOpen(true);
+  }
 
   async function adjust(event: FormEvent) {
     event.preventDefault();
@@ -90,7 +145,11 @@ export default function AdminInventoryPage() {
         body: { delta: Number(delta), reason, note },
       });
       setNote("");
-      await load();
+      const inventory = await load();
+      const refreshed = inventory.find((row) => row.variantId === variantId);
+      if (refreshed) {
+        setVariantSearch(variantLabel(refreshed));
+      }
     } catch (adjustError) {
       setError(adjustError instanceof Error ? adjustError.message : "Ajustement impossible.");
     } finally {
@@ -108,21 +167,95 @@ export default function AdminInventoryPage() {
         onSubmit={adjust}
         className="mb-6 grid gap-3 border border-tdev-anthracite bg-tdev-white p-4 lg:grid-cols-[2fr_1fr_1fr_2fr_auto]"
       >
-        <label className="text-sm font-medium">
-          Variante
-          <select
-            className="mt-1.5 h-11 w-full border border-tdev-anthracite px-2"
-            value={variantId}
-            onChange={(event) => setVariantId(event.target.value)}
-          >
-            <option value="">Choisir</option>
-            {(rows ?? []).map((row) => (
-              <option key={row.variantId} value={row.variantId}>
-                {row.productName} · {row.sku} ({row.stock})
-              </option>
-            ))}
-          </select>
-        </label>
+        <div ref={variantBoxRef} className="relative text-sm font-medium">
+          <label htmlFor="variant-search">Variante</label>
+          <div className="relative mt-1.5">
+            <input
+              id="variant-search"
+              role="combobox"
+              aria-expanded={variantOpen}
+              aria-controls="variant-search-list"
+              aria-autocomplete="list"
+              autoComplete="off"
+              className="h-11 w-full border border-tdev-anthracite px-2 pr-16 font-normal"
+              placeholder="Rechercher produit, SKU, taille, couleur…"
+              value={variantSearch}
+              onChange={(event) => {
+                setVariantSearch(event.target.value);
+                setVariantId("");
+                setVariantOpen(true);
+              }}
+              onFocus={() => setVariantOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setVariantOpen(false);
+                }
+                if (event.key === "Enter" && variantOpen && variantMatches[0]) {
+                  event.preventDefault();
+                  selectVariant(variantMatches[0]);
+                }
+              }}
+            />
+            {variantId || variantSearch ? (
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-extrabold uppercase text-tdev-muted hover:text-tdev-anthracite"
+                onClick={clearVariant}
+              >
+                Effacer
+              </button>
+            ) : null}
+          </div>
+          {variantOpen ? (
+            <ul
+              id="variant-search-list"
+              role="listbox"
+              className="absolute z-20 mt-1 max-h-64 w-full overflow-auto border border-tdev-anthracite bg-tdev-white shadow-[4px_4px_0_#1a1a1a]"
+            >
+              {variantMatches.length === 0 ? (
+                <li className="px-3 py-2 text-sm font-normal text-tdev-muted">
+                  Aucune variante trouvée.
+                </li>
+              ) : (
+                variantMatches.map((row) => {
+                  const selected = row.variantId === variantId;
+                  return (
+                    <li key={row.variantId} role="option" aria-selected={selected}>
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left font-normal transition-colors",
+                          selected ? "bg-tdev-surface" : "hover:bg-tdev-surface",
+                        )}
+                        onClick={() => selectVariant(row)}
+                      >
+                        <span className="text-sm font-medium text-tdev-anthracite">
+                          {row.productName}
+                        </span>
+                        <span className="text-xs text-tdev-muted">
+                          {[row.size, row.color].filter(Boolean).join(" / ") || "Sans option"}
+                          {" · "}
+                          {row.sku}
+                          {" · stock "}
+                          {row.stock}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          ) : null}
+          {selectedVariant ? (
+            <p className="mt-1 text-xs font-normal text-tdev-muted">
+              Sélectionnée · stock actuel {selectedVariant.stock}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs font-normal text-tdev-muted">
+              Tape pour filtrer, puis choisis dans la liste.
+            </p>
+          )}
+        </div>
         <label className="text-sm font-medium">
           Variation
           <input

@@ -1,14 +1,18 @@
+import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { mockProducts } from "@/features/catalog/services/catalog-mock";
 import { hashPassword } from "@/server/password";
 import type {
   AdminCategory,
+  AdminInviteResult,
   AdminNotification,
   AdminOrder,
   AdminPayment,
   AdminProduct,
+  AdminRole,
   AdminUser,
+  AdminUserPublic,
   AdminVariant,
   AuditLog,
   DashboardSnapshot,
@@ -16,7 +20,7 @@ import type {
   InventoryReason,
   ProductStatus,
 } from "@/types/admin";
-import { ORDER_TRANSITIONS } from "@/types/admin";
+import { ADMIN_ROLES, ORDER_TRANSITIONS } from "@/types/admin";
 import type { Product } from "@/types/catalog";
 import type { Order, OrderStatus } from "@/types/order";
 import type { PaymentMethod, PaymentStatus } from "@/types/payment";
@@ -52,6 +56,8 @@ function id(prefix: string): string {
 function toAdminVariant(variant: Product["variants"][number]): AdminVariant {
   return {
     ...variant,
+    imageUrl: variant.imageUrl ?? null,
+    colorHex: variant.colorHex ?? null,
     reservedQuantity: 0,
     soldQuantity: 0,
     lowStockThreshold: 5,
@@ -215,6 +221,7 @@ export function toPublicProduct(product: AdminProduct): Product {
         size: variant.size,
         color: variant.color,
         colorHex: variant.colorHex ?? null,
+        imageUrl: variant.imageUrl ?? null,
         sku: variant.sku,
         stockQuantity: variant.stockQuantity,
         unitPrice: variant.unitPrice,
@@ -245,14 +252,181 @@ export function listAdminProducts() {
   return loadState().products;
 }
 
-export function listAdminUsers() {
-  return loadState().users.map((user) => ({
+function toPublicUser(user: AdminUser): AdminUserPublic {
+  return {
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
     active: user.active,
-  }));
+  };
+}
+
+function generateTemporaryPassword(): string {
+  return `Tdev-${randomBytes(9).toString("base64url")}`;
+}
+
+function assertValidRole(role: string): asserts role is AdminRole {
+  if (!(ADMIN_ROLES as readonly string[]).includes(role)) {
+    throw new Error("Rôle invalide. Choisis admin ou staff.");
+  }
+}
+
+function countActiveAdmins(users: AdminUser[], exceptId?: string) {
+  return users.filter(
+    (user) =>
+      user.active &&
+      user.role === "admin" &&
+      user.id !== exceptId,
+  ).length;
+}
+
+export function listAdminUsers() {
+  return loadState().users.map(toPublicUser);
+}
+
+export function inviteAdminUser(
+  actor: { id: string; email: string },
+  input: { email: string; name: string; role: AdminRole },
+): AdminInviteResult {
+  return mutate((state) => {
+    const email = input.email.trim().toLowerCase();
+    const name = input.name.trim();
+    assertValidRole(input.role);
+    if (!email || !email.includes("@")) {
+      throw new Error("Email invalide.");
+    }
+    if (!name) {
+      throw new Error("Le nom est requis.");
+    }
+
+    const temporaryPassword = generateTemporaryPassword();
+    const existing = state.users.find(
+      (user) => user.email.toLowerCase() === email,
+    );
+
+    if (existing?.active) {
+      throw new Error(`Un compte actif existe déjà pour ${email}.`);
+    }
+
+    if (existing) {
+      const oldValue = `${existing.role}:${existing.active ? "active" : "inactive"}`;
+      existing.name = name;
+      existing.role = input.role;
+      existing.active = true;
+      existing.passwordHash = hashPassword(temporaryPassword);
+      writeAudit(
+        actor,
+        state,
+        "user.reinvite",
+        "user",
+        existing.id,
+        oldValue,
+        `${existing.role}:active`,
+      );
+      notify(
+        state,
+        "info",
+        `${existing.name} (${existing.role}) a été réinvité au back office.`,
+      );
+      return { user: toPublicUser(existing), temporaryPassword };
+    }
+
+    const user: AdminUser = {
+      id: id("usr"),
+      email,
+      name,
+      role: input.role,
+      passwordHash: hashPassword(temporaryPassword),
+      active: true,
+    };
+    state.users.push(user);
+    writeAudit(actor, state, "user.invite", "user", user.id, null, `${user.email}:${user.role}`);
+    notify(
+      state,
+      "success",
+      `${user.name} a été invité en tant que ${user.role}.`,
+    );
+    return { user: toPublicUser(user), temporaryPassword };
+  });
+}
+
+export function updateAdminUser(
+  actor: { id: string; email: string },
+  idValue: string,
+  patch: { role?: AdminRole; active?: boolean; name?: string },
+): AdminUserPublic {
+  return mutate((state) => {
+    const user = state.users.find((item) => item.id === idValue);
+    if (!user) {
+      throw new Error("Utilisateur introuvable.");
+    }
+
+    if (patch.role !== undefined) {
+      assertValidRole(patch.role);
+    }
+
+    const nextRole = patch.role ?? user.role;
+    const nextActive = patch.active ?? user.active;
+    const nextName = patch.name?.trim();
+
+    if (user.id === actor.id && nextActive === false) {
+      throw new Error("Tu ne peux pas désactiver ton propre compte.");
+    }
+
+    if (
+      user.role === "admin" &&
+      user.active &&
+      (nextRole !== "admin" || nextActive === false) &&
+      countActiveAdmins(state.users, user.id) === 0
+    ) {
+      throw new Error("Il doit rester au moins un admin actif.");
+    }
+
+    const oldValue = `${user.name}:${user.role}:${user.active ? "active" : "inactive"}`;
+    if (nextName) {
+      user.name = nextName;
+    }
+    user.role = nextRole;
+    user.active = nextActive;
+    writeAudit(
+      actor,
+      state,
+      "user.update",
+      "user",
+      user.id,
+      oldValue,
+      `${user.name}:${user.role}:${user.active ? "active" : "inactive"}`,
+    );
+    return toPublicUser(user);
+  });
+}
+
+export function resetAdminUserPassword(
+  actor: { id: string; email: string },
+  idValue: string,
+): AdminInviteResult {
+  return mutate((state) => {
+    const user = state.users.find((item) => item.id === idValue);
+    if (!user) {
+      throw new Error("Utilisateur introuvable.");
+    }
+    if (!user.active) {
+      throw new Error("Réactive le compte avant de régénérer le mot de passe.");
+    }
+    const temporaryPassword = generateTemporaryPassword();
+    user.passwordHash = hashPassword(temporaryPassword);
+    writeAudit(
+      actor,
+      state,
+      "user.reset_password",
+      "user",
+      user.id,
+      null,
+      "password_rotated",
+    );
+    return { user: toPublicUser(user), temporaryPassword };
+  });
 }
 
 export function getAdminProduct(idValue: string) {
@@ -330,6 +504,7 @@ export function createProduct(
       size: AdminVariant["size"];
       color: string | null;
       colorHex?: string | null;
+      imageUrl?: string | null;
       sku: string;
       stockQuantity: number;
       unitPrice: number;
@@ -374,6 +549,7 @@ export function createProduct(
         size: variant.size,
         color: variant.color,
         colorHex: variant.colorHex ?? null,
+        imageUrl: variant.imageUrl?.trim() || null,
         sku: variant.sku.trim().toUpperCase(),
         stockQuantity: Math.max(0, Math.floor(variant.stockQuantity)),
         unitPrice: variant.unitPrice,
@@ -454,6 +630,8 @@ export function duplicateProduct(user: { id: string; email: string }, idValue: s
     variants: current.variants.map((variant) => ({
       size: variant.size,
       color: variant.color,
+      colorHex: variant.colorHex ?? null,
+      imageUrl: variant.imageUrl ?? null,
       sku: `${variant.sku}-COPY`,
       stockQuantity: variant.stockQuantity,
       unitPrice: variant.unitPrice,
@@ -699,16 +877,44 @@ export function listPickups() {
     }));
 }
 
-export function dashboardSnapshot(): DashboardSnapshot {
+export function dashboardSnapshot(range?: {
+  from?: string;
+  to?: string;
+}): DashboardSnapshot {
   const state = loadState();
-  const paid = state.orders.filter((order) =>
+  const today = new Date();
+  const toKey = (range?.to && /^\d{4}-\d{2}-\d{2}$/.test(range.to)
+    ? range.to
+    : today.toISOString().slice(0, 10));
+  const defaultFrom = new Date(toKey);
+  defaultFrom.setDate(defaultFrom.getDate() - 6);
+  const fromKey = (range?.from && /^\d{4}-\d{2}-\d{2}$/.test(range.from)
+    ? range.from
+    : defaultFrom.toISOString().slice(0, 10));
+  const from = fromKey <= toKey ? fromKey : toKey;
+  const to = fromKey <= toKey ? toKey : fromKey;
+
+  const inRange = (createdAt: string) => {
+    const day = createdAt.slice(0, 10);
+    return day >= from && day <= to;
+  };
+
+  const periodOrders = state.orders.filter((order) => inRange(order.createdAt));
+  const paid = periodOrders.filter((order) =>
     ["paid", "processing", "ready_for_pickup", "picked_up", "completed", "shipped"].includes(
       order.status,
     ),
   );
-  const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - index));
+
+  const start = new Date(`${from}T00:00:00.000Z`);
+  const end = new Date(`${to}T00:00:00.000Z`);
+  const dayCount = Math.min(
+    92,
+    Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1),
+  );
+  const days = Array.from({ length: dayCount }, (_, index) => {
+    const date = new Date(start);
+    date.setUTCDate(start.getUTCDate() + index);
     const key = date.toISOString().slice(0, 10);
     const dayOrders = paid.filter((order) => order.createdAt.slice(0, 10) === key);
     return {
@@ -717,6 +923,7 @@ export function dashboardSnapshot(): DashboardSnapshot {
       count: dayOrders.length,
     };
   });
+
   const sales = new Map<string, { quantity: number; amount: number }>();
   for (const order of paid) {
     for (const item of order.items) {
@@ -728,14 +935,16 @@ export function dashboardSnapshot(): DashboardSnapshot {
   }
   const inventory = listInventory();
   return {
+    from,
+    to,
     revenue: paid.reduce((sum, order) => sum + order.total, 0),
-    orders: state.orders.length,
+    orders: periodOrders.length,
     paidOrders: paid.length,
-    pendingOrders: state.orders.filter((order) =>
+    pendingOrders: periodOrders.filter((order) =>
       ["awaiting_payment", "payment_failed"].includes(order.status),
     ).length,
-    readyForPickup: state.orders.filter((order) => order.status === "ready_for_pickup").length,
-    pickedUp: state.orders.filter((order) =>
+    readyForPickup: periodOrders.filter((order) => order.status === "ready_for_pickup").length,
+    pickedUp: periodOrders.filter((order) =>
       ["picked_up", "completed"].includes(order.status),
     ).length,
     activeProducts: state.products.filter((product) => product.status === "published").length,
