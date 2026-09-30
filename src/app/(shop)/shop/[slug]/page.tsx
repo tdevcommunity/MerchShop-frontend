@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ProductGallery } from "@/features/product/components/product-gallery";
-import { ProductPurchasePanel } from "@/features/product/components/product-purchase-panel";
+import { ProductDetail } from "@/features/product/components/product-detail";
 import { RelatedProducts } from "@/features/product/components/related-products";
 import { getProductBySlug } from "@/features/product/services/product-service";
 import { listProducts, listShopCategories } from "@/features/catalog/services/catalog-service";
@@ -72,8 +71,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         <span className="text-tdev-anthracite">{product.name}</span>
       </nav>
       <article className="motion-page grid gap-8 lg:grid-cols-2">
-        <ProductGallery product={product} />
-        <ProductPurchasePanel product={product} />
+        <ProductDetail product={product} />
       </article>
       <RelatedProducts products={related} />
     </div>

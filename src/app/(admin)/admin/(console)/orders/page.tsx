@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AdminActionLink } from "@/features/admin/components/admin-action";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { AdminAction } from "@/features/admin/components/admin-action";
 import { AdminState } from "@/features/admin/components/admin-state";
+import { OrderDetailModal } from "@/features/admin/components/order-detail-modal";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
 import { adminRequest } from "@/features/admin/services/admin-client";
+import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/features/admin/labels";
 import { formatMoney } from "@/lib/utils/format-money";
 import { ORDER_STATUSES } from "@/types/order";
 import type { AdminOrder } from "@/types/admin";
@@ -18,7 +21,17 @@ type OrdersResponse = {
   pageSize: number;
 };
 
-export default function AdminOrdersPage() {
+const DELIVERY_LABELS: Record<string, string> = {
+  pickup_event: "Retrait",
+  delivery: "Livraison",
+};
+
+function AdminOrdersContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const selectedOrderId = searchParams.get("order");
+
   const [data, setData] = useState<OrdersResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -27,6 +40,20 @@ export default function AdminOrdersPage() {
   const [fulfillment, setFulfillment] = useState("");
   const [product, setProduct] = useState("");
   const [page, setPage] = useState(1);
+
+  const setSelectedOrderId = useCallback(
+    (orderId: string | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (orderId) {
+        params.set("order", orderId);
+      } else {
+        params.delete("order");
+      }
+      const next = params.toString();
+      router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   useEffect(() => {
     const params = new URLSearchParams({
@@ -45,13 +72,24 @@ export default function AdminOrdersPage() {
 
   const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
+  function refreshListOrder(order: AdminOrder) {
+    setData((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((item) => (item.id === order.id ? order : item)),
+          }
+        : current,
+    );
+  }
+
   return (
     <div>
       <PageHeader
         title="Commandes"
-        description="Filtres et pagination serveur — le navigateur ne charge pas tout le festival."
+        description="Filtres et pagination serveur — le détail s'ouvre en popup."
       />
-      <div className="mb-4 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+      <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <input
           value={query}
           onChange={(event) => {
@@ -72,7 +110,7 @@ export default function AdminOrdersPage() {
           <option value="">Tous les statuts</option>
           {ORDER_STATUSES.map((item) => (
             <option key={item} value={item}>
-              {item}
+              {ORDER_STATUS_LABELS[item]}
             </option>
           ))}
         </select>
@@ -87,7 +125,7 @@ export default function AdminOrdersPage() {
           <option value="">Tous les paiements</option>
           {PAYMENT_STATUSES.map((item) => (
             <option key={item} value={item}>
-              {item}
+              {PAYMENT_STATUS_LABELS[item]}
             </option>
           ))}
         </select>
@@ -149,15 +187,17 @@ export default function AdminOrdersPage() {
                     <td className="p-3">
                       <StatusBadge value={order.paymentStatus} />
                     </td>
-                    <td className="p-3">{order.deliveryMethod}</td>
+                    <td className="p-3">
+                      {DELIVERY_LABELS[order.deliveryMethod] ?? order.deliveryMethod}
+                    </td>
                     <td className="p-3">
                       <StatusBadge value={order.status} />
                     </td>
                     <td className="p-3">{order.status === "awaiting_payment" ? "—" : "Prêt"}</td>
                     <td className="p-3">
-                      <AdminActionLink href={`/admin/orders/${order.id}`} tone="brand">
+                      <AdminAction tone="brand" onClick={() => setSelectedOrderId(order.id)}>
                         Détail
-                      </AdminActionLink>
+                      </AdminAction>
                     </td>
                   </tr>
                 ))}
@@ -189,6 +229,20 @@ export default function AdminOrdersPage() {
           </div>
         </>
       ) : null}
+
+      <OrderDetailModal
+        orderId={selectedOrderId}
+        onClose={() => setSelectedOrderId(null)}
+        onUpdated={refreshListOrder}
+      />
     </div>
+  );
+}
+
+export default function AdminOrdersPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-tdev-muted">Chargement des commandes…</p>}>
+      <AdminOrdersContent />
+    </Suspense>
   );
 }

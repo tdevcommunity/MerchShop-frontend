@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClassName } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { adminRequest } from "@/features/admin/services/admin-client";
 import {
@@ -10,6 +10,7 @@ import {
   isPaletteColor,
   PRODUCT_COLOR_OPTIONS,
 } from "@/features/catalog/utils";
+import { cn } from "@/lib/utils/cn";
 import { TEXTILE_SIZES } from "@/types/catalog";
 import type { AdminCategory, AdminProduct, AdminVariant, ProductStatus } from "@/types/admin";
 
@@ -18,6 +19,7 @@ type VariantDraft = {
   size: (typeof TEXTILE_SIZES)[number] | null;
   color: string;
   colorHex: string;
+  imageUrl: string;
   sku: string;
   stockQuantity: number;
   unitPrice: number;
@@ -28,8 +30,71 @@ type ProductFormProps = {
   product?: AdminProduct;
 };
 
+type ImageFilePickerProps = {
+  label: string;
+  onFile: (file: File) => void;
+  className?: string;
+};
+
+function ImageFilePicker({ label, onFile, className }: ImageFilePickerProps) {
+  const id = useId();
+
+  return (
+    <div className={cn("flex flex-col gap-1.5", className)}>
+      <input
+        id={id}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) {
+            onFile(file);
+          }
+          event.target.value = "";
+        }}
+      />
+      <label
+        htmlFor={id}
+        className={buttonClassName(
+          "secondary",
+          "md",
+          "w-full cursor-pointer border-2 border-dashed border-tdev-anthracite bg-tdev-surface hover:bg-tdev-white sm:w-auto",
+        )}
+      >
+        {label}
+      </label>
+    </div>
+  );
+}
+
 function uniqueColors(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.map((value) => value?.trim()).filter(Boolean))] as string[];
+}
+
+function initialColorImages(product?: AdminProduct): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const variant of product?.variants ?? []) {
+    if (variant.color && variant.imageUrl && !map[variant.color]) {
+      map[variant.color] = variant.imageUrl;
+    }
+  }
+  return map;
+}
+
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Lecture image impossible."));
+      }
+    };
+    reader.onerror = () => reject(new Error("Lecture image impossible."));
+    reader.readAsDataURL(file);
+  });
 }
 
 export function ProductForm({ categories, product }: ProductFormProps) {
@@ -44,17 +109,30 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [featured, setFeatured] = useState(product?.featured ?? false);
   const [images, setImages] = useState<string[]>(product?.images ?? []);
   const [imageUrl, setImageUrl] = useState("");
+  const [colorImages, setColorImages] = useState<Record<string, string>>(() =>
+    initialColorImages(product),
+  );
+  const [colorImageDraft, setColorImageDraft] = useState<Record<string, string>>({});
   const [variants, setVariants] = useState<VariantDraft[]>(
     product?.variants.map((variant) => ({
       id: variant.id,
       size: variant.size,
       color: variant.color ?? "",
       colorHex: variant.colorHex ?? "#c8b4a0",
+      imageUrl: variant.imageUrl ?? "",
       sku: variant.sku,
       stockQuantity: variant.stockQuantity,
       unitPrice: variant.unitPrice,
     })) ?? [
-      { size: "M", color: "Noir", colorHex: "", sku: "", stockQuantity: 0, unitPrice: 0 },
+      {
+        size: "M",
+        color: "Noir",
+        colorHex: "",
+        imageUrl: "",
+        sku: "",
+        stockQuantity: 0,
+        unitPrice: 0,
+      },
     ],
   );
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +143,10 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   );
 
   const colorOptions = uniqueColors([...PRODUCT_COLOR_OPTIONS, ...extraColors]);
+  const variantColors = useMemo(
+    () => uniqueColors(variants.map((variant) => variant.color)),
+    [variants],
+  );
 
   function addImage() {
     if (!imageUrl.trim()) {
@@ -74,14 +156,60 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     setImageUrl("");
   }
 
-  async function onFile(file: File) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setImages((current) => [...current, reader.result as string]);
-      }
-    };
-    reader.readAsDataURL(file);
+  async function onProductFile(file: File) {
+    const dataUrl = await readAsDataUrl(file);
+    setImages((current) => [...current, dataUrl]);
+  }
+
+  function setColorImage(color: string, src: string) {
+    setColorImages((current) => ({ ...current, [color]: src }));
+    setVariants((current) =>
+      current.map((variant) =>
+        variant.color === color ? { ...variant, imageUrl: src } : variant,
+      ),
+    );
+  }
+
+  function clearColorImage(color: string) {
+    setColorImages((current) => {
+      const next = { ...current };
+      delete next[color];
+      return next;
+    });
+    setColorImageDraft((current) => {
+      const next = { ...current };
+      delete next[color];
+      return next;
+    });
+    setVariants((current) =>
+      current.map((variant) =>
+        variant.color === color ? { ...variant, imageUrl: "" } : variant,
+      ),
+    );
+  }
+
+  async function onColorFile(color: string, file: File) {
+    const dataUrl = await readAsDataUrl(file);
+    setColorImage(color, dataUrl);
+  }
+
+  function applyColorToVariant(
+    index: number,
+    color: string,
+    colorHex = "",
+  ) {
+    setVariants((current) =>
+      current.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              color,
+              colorHex: isPaletteColor(color) ? "" : colorHex || item.colorHex || "#c8b4a0",
+              imageUrl: colorImages[color] ?? item.imageUrl,
+            }
+          : item,
+      ),
+    );
   }
 
   async function submit(event: FormEvent) {
@@ -104,11 +232,13 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               .filter(Boolean)
               .join("-")
               .toUpperCase();
+          const color = variant.color || null;
           return {
             ...variant,
             sku,
-            color: variant.color || null,
-            colorHex: isPaletteColor(variant.color) ? null : variant.colorHex || null,
+            color,
+            colorHex: color && isPaletteColor(color) ? null : variant.colorHex || null,
+            imageUrl: color ? colorImages[color] || variant.imageUrl || null : null,
           };
         }),
       };
@@ -122,7 +252,11 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             productId: product.id,
             size: variant.size,
             color: variant.color,
-            colorHex: variant.color && isPaletteColor(variant.color) ? null : variant.colorHex || null,
+            colorHex:
+              variant.color && isPaletteColor(variant.color)
+                ? null
+                : variant.colorHex || null,
+            imageUrl: variant.imageUrl || null,
             sku: variant.sku,
             stockQuantity: variant.stockQuantity,
             unitPrice: variant.unitPrice,
@@ -210,7 +344,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       </section>
 
       <section className="border border-tdev-anthracite bg-tdev-white p-5">
-        <h2 className="font-headline text-lg font-extrabold uppercase">Images</h2>
+        <h2 className="font-headline text-lg font-extrabold uppercase">Images produit</h2>
         <div className="mt-4 flex flex-wrap gap-3">
           {images.map((src, index) => (
             <div key={`${src}-${index}`} className="relative size-24 border border-tdev-border">
@@ -226,30 +360,124 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             </div>
           ))}
         </div>
-        <div className="mt-4 flex gap-2">
-          <Input
-            name="imageUrl"
-            label="URL image"
-            value={imageUrl}
-            onChange={(event) => setImageUrl(event.target.value)}
-          />
-          <Button type="button" className="self-end" onClick={addImage}>
-            Ajouter
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="min-w-0 flex-1">
+            <Input
+              name="imageUrl"
+              label="URL image"
+              value={imageUrl}
+              onChange={(event) => setImageUrl(event.target.value)}
+            />
+          </div>
+          <Button type="button" className="w-full sm:w-auto" onClick={addImage}>
+            Ajouter URL
           </Button>
         </div>
-        <input
-          type="file"
-          accept="image/*"
-          className="mt-3 text-sm"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void onFile(file);
-          }}
+        <ImageFilePicker
+          className="mt-3"
+          label="Importer depuis l'appareil"
+          onFile={(file) => void onProductFile(file)}
         />
         <p className="mt-2 text-xs text-tdev-muted">
-          La première image devient l&apos;image principale. Stockage Cloudinary/S3 à brancher
-          quand le backend le fournit.
+          Image principale / fallback si une couleur n&apos;a pas encore de photo. Lien Drive
+          accepté si le fichier est partagé «&nbsp;Toute personne disposant du lien&nbsp;».
         </p>
+      </section>
+
+      <section className="border border-tdev-anthracite bg-tdev-white p-5">
+        <h2 className="font-headline text-lg font-extrabold uppercase">
+          Photos par couleur
+        </h2>
+        <p className="mt-2 text-sm text-tdev-muted">
+          Sur le Shop, changer de couleur affiche la photo correspondante. Une photo sert
+          pour toutes les tailles de cette couleur.
+        </p>
+        {variantColors.length === 0 ? (
+          <p className="mt-4 text-sm text-tdev-muted">
+            Ajoute d&apos;abord des variantes avec une couleur.
+          </p>
+        ) : (
+          <div className="mt-4 flex flex-col gap-4">
+            {variantColors.map((color) => {
+              const src = colorImages[color];
+              const hex =
+                variants.find((variant) => variant.color === color)?.colorHex || null;
+              return (
+                <div
+                  key={color}
+                  className="grid gap-3 border border-tdev-border p-3 sm:grid-cols-[96px_1fr]"
+                >
+                  <div className="relative size-24 border border-tdev-anthracite bg-tdev-surface">
+                    {src ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt={color} className="size-full object-cover" />
+                        <button
+                          type="button"
+                          className="absolute right-1 top-1 bg-tdev-white px-1 text-xs"
+                          onClick={() => clearColorImage(color)}
+                        >
+                          ×
+                        </button>
+                      </>
+                    ) : (
+                      <span
+                        className={`flex size-full items-center justify-center text-[10px] font-bold uppercase ${colorSwatchClass(color)}`}
+                        style={
+                          !isPaletteColor(color) && hex
+                            ? { backgroundColor: hex }
+                            : undefined
+                        }
+                      >
+                        {src ? "" : "Vide"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex min-w-0 flex-col gap-2">
+                    <p className="text-sm font-extrabold uppercase tracking-[0.08em]">
+                      {color}
+                    </p>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <div className="min-w-0 flex-1">
+                        <Input
+                          name={`color-image-${color}`}
+                          label="URL"
+                          value={colorImageDraft[color] ?? ""}
+                          onChange={(event) =>
+                            setColorImageDraft((current) => ({
+                              ...current,
+                              [color]: event.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        className="w-full sm:w-auto"
+                        onClick={() => {
+                          const next = colorImageDraft[color]?.trim();
+                          if (next) {
+                            setColorImage(color, next);
+                            setColorImageDraft((current) => ({
+                              ...current,
+                              [color]: "",
+                            }));
+                          }
+                        }}
+                      >
+                        Lier URL
+                      </Button>
+                    </div>
+                    <ImageFilePicker
+                      label={`Importer photo ${color}`}
+                      onFile={(file) => void onColorFile(color, file)}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section className="border border-tdev-anthracite bg-tdev-white p-5">
@@ -262,7 +490,15 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             onClick={() =>
               setVariants((current) => [
                 ...current,
-                { size: null, color: "", colorHex: "", sku: "", stockQuantity: 0, unitPrice: 0 },
+                {
+                  size: null,
+                  color: "",
+                  colorHex: "",
+                  imageUrl: "",
+                  sku: "",
+                  stockQuantity: 0,
+                  unitPrice: 0,
+                },
               ])
             }
           >
@@ -271,7 +507,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         </div>
         <div className="mt-4 flex flex-col gap-3">
           {variants.map((variant, index) => (
-            <div key={index} className="grid gap-2 border border-tdev-border p-3 sm:grid-cols-5">
+            <div key={index} className="grid gap-2 border border-tdev-border p-3 sm:grid-cols-2 lg:grid-cols-5">
               <label className="flex flex-col gap-1.5 text-sm font-medium">
                 Taille
                 <select
@@ -332,17 +568,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                         return;
                       }
                       setCustomColorFor(null);
-                      setVariants((current) =>
-                        current.map((item, i) =>
-                          i === index
-                            ? {
-                                ...item,
-                                color: value,
-                                colorHex: isPaletteColor(value) ? "" : item.colorHex || "#c8b4a0",
-                              }
-                            : item,
-                        ),
-                      );
+                      applyColorToVariant(index, value);
                     }}
                   >
                     <option value="">Sans couleur</option>
@@ -380,17 +606,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                           return;
                         }
                         setExtraColors((current) => uniqueColors([...current, next]));
-                        setVariants((current) =>
-                          current.map((item, i) =>
-                            i === index
-                              ? {
-                                  ...item,
-                                  color: next,
-                                  colorHex: item.colorHex || "#c8b4a0",
-                                }
-                              : item,
-                          ),
-                        );
+                        applyColorToVariant(index, next, variant.colorHex || "#c8b4a0");
                         setCustomColorFor(null);
                       }}
                       onKeyDown={(event) => {
