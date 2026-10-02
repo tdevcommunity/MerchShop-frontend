@@ -20,7 +20,8 @@ type CreateMockOrderInput = {
 };
 
 export async function createMockOrder(input: CreateMockOrderInput): Promise<Order> {
-  const response = await fetch("/api/shop/orders", {
+  const baseUrl = typeof window !== "undefined" && window.location.origin ? window.location.origin : "http://localhost";
+  const response = await fetch(`${baseUrl}/api/shop/orders`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(input),

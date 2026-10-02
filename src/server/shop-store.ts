@@ -141,12 +141,12 @@ function seedState(): ShopState {
   };
 }
 
-function useFileStore() {
+function shouldUseFileStore() {
   return env.appEnv !== "production" && env.appEnv !== "test" && !process.env.VITEST;
 }
 
 function persist(state: ShopState) {
-  if (!useFileStore()) {
+  if (!shouldUseFileStore()) {
     return;
   }
   try {
@@ -163,7 +163,7 @@ function persist(state: ShopState) {
 }
 
 function loadState(): ShopState {
-  if (useFileStore()) {
+  if (shouldUseFileStore()) {
     try {
       const file = dataFile();
       if (existsSync(file)) {

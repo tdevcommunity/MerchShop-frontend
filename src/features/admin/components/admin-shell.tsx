@@ -63,6 +63,13 @@ export function AdminShell({ children }: AdminShellProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [notes, setNotes] = useState<AdminNotification[]>([]);
+  const [prevPathname, setPrevPathname] = useState(pathname);
+
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setMenuOpen(false);
+    setSearchOpen(false);
+  }
 
   useEffect(() => {
     void adminRequest<AdminSessionUser>("/api/admin/me")
@@ -70,11 +77,6 @@ export function AdminShell({ children }: AdminShellProps) {
       .catch(() => router.replace("/admin/login"));
     void adminRequest<AdminNotification[]>("/api/admin/notifications").then(setNotes);
   }, [router]);
-
-  useEffect(() => {
-    setMenuOpen(false);
-    setSearchOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     if (!menuOpen) {
