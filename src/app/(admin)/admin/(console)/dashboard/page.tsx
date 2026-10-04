@@ -54,11 +54,17 @@ export default function AdminDashboardPage() {
     return params.toString();
   }, [from, to]);
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const [prevQuery, setPrevQuery] = useState(query);
+
+  if (query !== prevQuery) {
+    setPrevQuery(query);
     setLoading(true);
     setError(null);
     setData(null);
+  }
+
+  useEffect(() => {
+    const controller = new AbortController();
 
     void adminRequest<DashboardSnapshot>(`/api/admin/dashboard?${query}`, {
       signal: controller.signal,

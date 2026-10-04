@@ -7,8 +7,9 @@ export const QR_STATUSES = ["pending", "ready", "unavailable"] as const;
 export type QrStatus = (typeof QR_STATUSES)[number];
 
 export type PickupQr = {
-  orderUuid: string;
+  orderId: string;
   status: QrStatus;
+  /** Image fournie par le backend (data URL ou URL signée). */
   imageUrl: string | null;
   alt: string;
 };

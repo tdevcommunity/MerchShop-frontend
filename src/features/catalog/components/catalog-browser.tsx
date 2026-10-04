@@ -26,10 +26,14 @@ export function CatalogBrowser({
   const pathname = usePathname();
   const [query, setQuery] = useState(initialQuery);
   const [, startTransition] = useTransition();
+  const [prevInitialQuery, setPrevInitialQuery] = useState(initialQuery);
+  const [prevActiveCategory, setPrevActiveCategory] = useState(activeCategory);
 
-  useEffect(() => {
+  if (initialQuery !== prevInitialQuery || activeCategory !== prevActiveCategory) {
+    setPrevInitialQuery(initialQuery);
+    setPrevActiveCategory(activeCategory);
     setQuery(initialQuery);
-  }, [initialQuery, activeCategory]);
+  }
 
   useEffect(() => {
     const handle = window.setTimeout(() => {

@@ -18,6 +18,8 @@ import { cartStore } from "@/features/cart/store/cart-store";
 import { checkoutDraftStore } from "@/features/checkout/store/checkout-draft-store";
 import { simulateMockPayment } from "@/features/payment/services/mock-payment";
 import { isPaymentSuccess } from "@/features/payment/services/payment-status";
+import { pollPaymentStatus } from "@/features/payment/services/payment-flow";
+import { useMockApi } from "@/lib/config/env";
 import { formatMoney } from "@/lib/utils/format-money";
 import { toUserMessage, ValidationError } from "@/lib/api/errors";
 import { validateCheckoutDraft } from "@/lib/validation/checkout";
@@ -60,23 +62,53 @@ export function PaymentProcessingView() {
         const latestDraft = checkoutDraftStore.getSnapshot();
         const latestCart = cartStore.getSnapshot();
         validateCheckoutDraft(latestDraft);
-        const paymentStatus = await simulateMockPayment(fail);
-        if (cancelled) {
-          return;
-        }
-        if (!isPaymentSuccess(paymentStatus)) {
+
+        if (fail) {
           track(analyticsEvents.paymentFailed, { reason: "mock_failed" });
           setStatus("failed");
           setError("Le paiement n'a pas abouti. Tu peux réessayer.");
           started.current = false;
           return;
         }
+
         const order = await createCheckoutSession(latestDraft, latestCart.items);
         if (cancelled) {
           return;
         }
         cartStore.clear();
         checkoutDraftStore.clear();
+
+        if (useMockApi) {
+          const paymentStatus = await simulateMockPayment(false);
+          if (cancelled) {
+            return;
+          }
+          if (!isPaymentSuccess(paymentStatus)) {
+            track(analyticsEvents.paymentFailed, { reason: "mock_failed" });
+            setStatus("failed");
+            setError("Le paiement n'a pas abouti. Tu peux réessayer.");
+            started.current = false;
+            return;
+          }
+        } else {
+          try {
+            await pollPaymentStatus(order.id, 8000, 1500);
+          } catch (pollErr) {
+            if (cancelled) {
+              return;
+            }
+            track(analyticsEvents.paymentFailed, { reason: "payment_failed" });
+            setStatus("failed");
+            setError(toUserMessage(pollErr));
+            started.current = false;
+            return;
+          }
+        }
+
+        if (cancelled) {
+          return;
+        }
+
         track(analyticsEvents.paymentSuccess, { orderId: order.id });
         track(analyticsEvents.orderCompleted, { orderId: order.id });
         router.replace(

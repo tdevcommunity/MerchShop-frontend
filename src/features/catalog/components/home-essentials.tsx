@@ -33,7 +33,7 @@ export function HomeEssentials({ products }: HomeEssentialsProps) {
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {products.map((product, index) => (
           <li
-            key={product.id ?? product.uuid}
+            key={product.id}
             className="motion-enter"
             style={{ animationDelay: staggerDelay(index) }}
           >

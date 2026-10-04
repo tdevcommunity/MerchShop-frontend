@@ -41,15 +41,18 @@ export function OrderDetailModal({
   const [data, setData] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [prevOrderId, setPrevOrderId] = useState(orderId);
+
+  if (orderId !== prevOrderId) {
+    setPrevOrderId(orderId);
+    setData(null);
+    setError(null);
+  }
 
   useEffect(() => {
     if (!orderId) {
-      setData(null);
-      setError(null);
       return;
     }
-    setData(null);
-    setError(null);
     void adminRequest<OrderDetail>(`/api/admin/orders/${orderId}`)
       .then(setData)
       .catch((loadError: Error) => setError(loadError.message));
