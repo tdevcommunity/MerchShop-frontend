@@ -7,43 +7,49 @@ export const PRODUCT_CATEGORIES = [
 export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
 
 export const TEXTILE_SIZES = ["S", "M", "L", "XL", "XXL", "XXXL"] as const;
-
 export type TextileSize = (typeof TEXTILE_SIZES)[number];
 
 export type ProductVariant = {
-  id: string;
-  productId: string;
-  size: TextileSize | null;
-  color: string | null;
-  /** Teinte libre (hex) si la couleur n'est pas dans la palette Shop. */
-  colorHex?: string | null;
-  /** Visuel de la couleur — partagé par toutes les tailles de cette teinte. */
-  imageUrl?: string | null;
+  uuid: string;
   sku: string;
-  /** Stock serveur — le frontend ne doit pas en déduire une vente certaine. */
-  stockQuantity: number;
-  unitPrice: number;
+  name: string;
+  size: string | null;
+  color: string | null;
+  price: number;
+  stock: number;
+  status: number;
+  isAvailable: boolean;
 };
 
-export const PRODUCT_BADGES = ["bestseller", "new", "limited"] as const;
-
-export type ProductBadge = (typeof PRODUCT_BADGES)[number];
-
 export type Product = {
-  id: string;
+  uuid: string;
   slug: string;
   name: string;
   description: string;
-  category: string;
-  categoryLabel?: string;
+  category: {
+    uuid: string;
+    name: string;
+    slug: string;
+  } | null;
   imageUrl: string | null;
-  badge: ProductBadge | null;
+  status: number;
   variants: ProductVariant[];
+  variantsCount: number;
+  priceFrom: number;
+  isAvailable: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Category = {
+  uuid: string;
+  name: string;
   slug: string;
-  label: string;
+  description: string | null;
+  status: number;
+  productsCount: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type CatalogFilters = {

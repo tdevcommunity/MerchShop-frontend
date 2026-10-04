@@ -30,13 +30,12 @@ export type CheckoutDraft = {
 };
 
 export type CheckoutPayload = {
-  customer: CustomerInfo;
-  deliveryMethod: DeliveryMethod;
-  shippingAddress: ShippingAddress | null;
-  paymentMethod: PaymentMethod;
+  fulfillment_method: "pickup" | "delivery";
+  shipping_address: string | null;
+  payment_method: "mobile_money" | "card";
+  participant_id: string | null;
   items: Array<{
-    productId: string;
-    variantId: string;
+    uuid: string; // variant uuid
     quantity: number;
   }>;
 };

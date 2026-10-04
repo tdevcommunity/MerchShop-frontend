@@ -4,7 +4,7 @@ import { ProductDetail } from "@/features/product/components/product-detail";
 import { RelatedProducts } from "@/features/product/components/related-products";
 import { getProductBySlug } from "@/features/product/services/product-service";
 import { listProducts, listShopCategories } from "@/features/catalog/services/catalog-service";
-import { categoryLabel } from "@/features/catalog/utils";
+import { categoryLabel, categorySlug } from "@/features/catalog/utils";
 import { isNotFoundError } from "@/lib/api/errors";
 import { createMetadata } from "@/lib/seo/create-metadata";
 
@@ -39,8 +39,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
     throw error;
   }
 
+  const catSlug = categorySlug(product.category);
   const [relatedAll, categories] = await Promise.all([
-    listProducts({ category: product.category }),
+    listProducts({ category: catSlug }),
     listShopCategories(),
   ]);
   const related = relatedAll.filter((item) => item.id !== product.id).slice(0, 4);
@@ -53,10 +54,18 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </Link>
         <span aria-hidden="true"> / </span>
         <Link
-          href={`/shop?category=${product.category}`}
+          href={`/shop?category=${catSlug}`}
           className="hover:text-tdev-anthracite"
         >
-          {product.categoryLabel ?? categoryLabel(product.category, categories)}
+          {(() => {
+            const label =
+              product.categoryLabel ?? categoryLabel(product.category, categories);
+            if (typeof label === "string") return label;
+            if (label && typeof label === "object") {
+              return (label as { name?: string; label?: string }).name ?? (label as { name?: string; label?: string }).label ?? "";
+            }
+            return String(label ?? "");
+          })()}
         </Link>
         <span aria-hidden="true"> / </span>
         <span className="text-tdev-anthracite">{product.name}</span>
