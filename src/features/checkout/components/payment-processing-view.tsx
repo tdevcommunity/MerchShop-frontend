@@ -1,25 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { BrandMark } from "@/components/layout/brand-mark";
 import { Button } from "@/components/ui/button";
-import { PhoneIcon, ShieldIcon } from "@/components/ui/icons";
+import { CreditCardIcon, ShieldIcon } from "@/components/ui/icons";
 import { DesktopCheckoutNav } from "@/features/checkout/components/desktop-checkout-nav";
 import { analyticsEvents } from "@/features/analytics/events";
 import { track } from "@/features/analytics/track";
 import { useCart } from "@/features/cart/hooks/use-cart";
+import type { Order } from "@/types/order";
 import { useCheckoutDraft } from "@/features/checkout/hooks/use-checkout-draft";
 import { createCheckoutSession } from "@/features/checkout/services/checkout-service";
-import { operatorLabel } from "@/features/checkout/utils";
 import { cartStore } from "@/features/cart/store/cart-store";
 import { checkoutDraftStore } from "@/features/checkout/store/checkout-draft-store";
-import { simulateMockPayment } from "@/features/payment/services/mock-payment";
-import { isPaymentSuccess } from "@/features/payment/services/payment-status";
-import { pollPaymentStatus } from "@/features/payment/services/payment-flow";
-import { useMockApi } from "@/lib/config/env";
+import { openFedapayCheckout } from "@/features/payment/services/fedapay-service";
+import { rememberPendingPayment } from "@/features/payment/store/pending-payment";
 import { formatMoney } from "@/lib/utils/format-money";
 import { toUserMessage, ValidationError } from "@/lib/api/errors";
 import { validateCheckoutDraft } from "@/lib/validation/checkout";
@@ -28,13 +26,22 @@ export function PaymentProcessingView() {
   const cart = useCart();
   const draft = useCheckoutDraft();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [status, setStatus] = useState<"processing" | "failed">("processing");
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const started = useRef(false);
 
-  const fail = searchParams.get("fail") === "1";
+  /*
+   * Creation de commande en cours, partagee par les rejeux d'effet.
+   *
+   * En developpement, React rejoue les effets (StrictMode) : sans cette
+   * memoire, chaque rejeu repartirait de zero et creerait sa propre commande.
+   * Ce ne serait pas qu'un doublon a l'ecran — l'API reserve le stock a chaque
+   * creation, donc deux commandes pour un seul panier, avec deux retraitements.
+   * En partageant la promesse, le rejeu attend la meme commande et n'en cree
+   * pas une seconde.
+   */
+  const pendingOrder = useRef<Promise<Order> | null>(null);
 
   useEffect(() => {
     if (started.current) {
@@ -63,57 +70,43 @@ export function PaymentProcessingView() {
         const latestCart = cartStore.getSnapshot();
         validateCheckoutDraft(latestDraft);
 
-        if (fail) {
-          track(analyticsEvents.paymentFailed, { reason: "mock_failed" });
-          setStatus("failed");
-          setError("Le paiement n'a pas abouti. Tu peux réessayer.");
-          started.current = false;
-          return;
-        }
-
-        const order = await createCheckoutSession(latestDraft, latestCart.items);
+        pendingOrder.current ??= createCheckoutSession(
+          latestDraft,
+          latestCart.items,
+        );
+        const order = await pendingOrder.current;
         if (cancelled) {
           return;
         }
+
+        /*
+         * Le panier est vide a partir d'ici : la commande existe, la facturer
+         * ne depend plus de lui. Il ne doit surtout pas etre reconstitue si
+         * l'acheteur revient en arriere depuis la page de l'operateur, sinon il
+         * verrait ses articles toujours disponibles et pourrait en commander
+         * une seconde fois.
+         */
         cartStore.clear();
         checkoutDraftStore.clear();
 
-        if (useMockApi) {
-          const paymentStatus = await simulateMockPayment(false);
-          if (cancelled) {
-            return;
-          }
-          if (!isPaymentSuccess(paymentStatus)) {
-            track(analyticsEvents.paymentFailed, { reason: "mock_failed" });
-            setStatus("failed");
-            setError("Le paiement n'a pas abouti. Tu peux réessayer.");
-            started.current = false;
-            return;
-          }
-        } else {
-          try {
-            await pollPaymentStatus(order.id, 8000, 1500);
-          } catch (pollErr) {
-            if (cancelled) {
-              return;
-            }
-            track(analyticsEvents.paymentFailed, { reason: "payment_failed" });
-            setStatus("failed");
-            setError(toUserMessage(pollErr));
-            started.current = false;
-            return;
-          }
-        }
-
+        /*
+         * Le reglement se fait chez FedaPay : on ouvre la page de l'operateur
+         * et le navigateur y va. On ne « simule » rien et on ne suppose aucun
+         * succes — le retour se fait par la page de retour, qui attend le
+         * webhook.
+         *
+         * La commande en cours est memorisee avant la redirection : l'adresse de
+         * retour de l'operateur est unique pour tous les acheteurs, elle ne
+         * peut donc pas porter l'identifiant de la commande.
+         */
+        const { checkoutUrl } = await openFedapayCheckout(order.id);
         if (cancelled) {
           return;
         }
+        rememberPendingPayment(order.id, checkoutUrl);
 
-        track(analyticsEvents.paymentSuccess, { orderId: order.id });
-        track(analyticsEvents.orderCompleted, { orderId: order.id });
-        router.replace(
-          `/checkout/confirmation?orderId=${encodeURIComponent(order.id)}`,
-        );
+        track(analyticsEvents.paymentStarted, { orderId: order.id });
+        window.location.assign(checkoutUrl);
       } catch (runError) {
         if (cancelled) {
           return;
@@ -131,20 +124,33 @@ export function PaymentProcessingView() {
 
     void run();
     return () => {
+      // Le panier peut avoir ete vide entre-temps : on libere l'etat pour que
+      // l'effet puisse rejouer apres une reactivation. La commande en cours,
+      // elle, reste memorisee : elle existe deja cote API.
       cancelled = true;
-      started.current = false;
+      started.current = cartStore.getSnapshot().items.length === 0;
     };
-  }, [fail, retryKey, router]);
+  }, [router, retryKey]);
 
   function retry() {
     started.current = false;
+    // Une nouvelle tentative doit repartir d'une commande neuve. Rejouer la
+    // precedente echouee rapporterait le meme echec, et laisserait l'acheteur
+    // sans facture a regler.
+    pendingOrder.current = null;
     setStatus("processing");
     setError(null);
     setRetryKey((value) => value + 1);
   }
 
-  const phone = draft.customer.phone.trim() || "ton numéro";
-  const operator = operatorLabel(draft.mobileOperator);
+  /*
+   * Seul le moyen de paiement est reellement transmis a l'API. L'operateur
+   * mobile saisi au checkout ne l'est pas : FedaPay propose lui-meme le choix
+   * du reseau sur sa page, donc l'afficher ici laisserait croire a un choix
+   * deja transmis que l'on aurait enregistre.
+   */
+  const methodLabel =
+    draft.paymentMethod === "card" ? "Carte bancaire" : "Mobile Money";
 
   return (
     <div className="flex min-h-dvh flex-col bg-[#141615] text-tdev-white">
@@ -186,27 +192,23 @@ export function PaymentProcessingView() {
               <span className="absolute inset-0 rounded-full border-4 border-tdev-yellow" />
               <span className="absolute inset-2 rounded-full border-2 border-[#2c3133]" />
               <span className="flex size-14 items-center justify-center rounded-full bg-tdev-blue">
-                <PhoneIcon className="size-6 text-tdev-white" />
+                <CreditCardIcon className="size-6 text-tdev-white" />
               </span>
             </div>
 
             <h1 className="text-center font-headline text-3xl font-extrabold uppercase leading-none tracking-[-1.2px] lg:text-5xl">
-              Paiement en
+              Redirection
               <br />
-              cours
+              en cours
             </h1>
             <p className="mt-6 max-w-[448px] text-center text-sm leading-relaxed text-[#b5b5b5] lg:text-base">
-              Valide la notification reçue sur ton téléphone au{" "}
-              <span className="font-bold text-tdev-white">{phone}</span>. Nous
-              synchronisons en direct avec l&apos;opérateur{" "}
+              Nous te redirigeons vers{" "}
+              <span className="font-bold text-tdev-white">FedaPay</span> pour
+              valider ton reglement de{" "}
               <span className="font-bold text-tdev-orange">
-                {draft.mobileOperator === "mixx"
-                  ? "Mixx By Yas"
-                  : draft.mobileOperator === "moov"
-                    ? "Moov Money"
-                    : "choisi"}
-                ...
+                {formatMoney(cart.subtotal)}
               </span>
+              . Tu seras ramene ici juste apres.
             </p>
 
             <div className="motion-processing-dots mt-8 flex items-center gap-2" aria-hidden="true">
@@ -225,12 +227,9 @@ export function PaymentProcessingView() {
               <div className="h-px bg-[#33383a]" />
               <div className="flex items-center justify-between">
                 <dt className="text-xs font-semibold uppercase tracking-[0.6px] text-[#8a8f91]">
-                  Opérateur
+                  Moyen de paiement
                 </dt>
-                <dd className="flex items-center gap-1.5 text-xs font-semibold">
-                  <span className="size-2 rounded-full bg-tdev-orange" />
-                  {operator}
-                </dd>
+                <dd className="text-xs font-semibold">{methodLabel}</dd>
               </div>
               <div className="h-px bg-[#33383a]" />
               <div className="flex items-center justify-between">
@@ -239,7 +238,7 @@ export function PaymentProcessingView() {
                 </dt>
                 <dd className="flex items-center gap-1.5 text-xs font-bold text-tdev-yellow">
                   <span className="size-2 bg-tdev-yellow" />
-                  En attente du push USSD
+                  Ouverture de la page de reglement
                 </dd>
               </div>
               <div className="h-px bg-[#33383a]" />
@@ -254,20 +253,20 @@ export function PaymentProcessingView() {
             </dl>
 
             <p className="mt-6 flex w-full items-center justify-center gap-2.5 bg-tdev-orange px-4 py-3.5 text-center text-sm font-bold tracking-[0.35px] text-tdev-anthracite">
-              Ne ferme pas cette page pendant la confirmation
+              Ne ferme pas cette page : tu vas être redirigé chez FedaPay
             </p>
 
             <div className="mt-6 flex w-full items-center justify-between gap-3">
               <p className="flex items-center gap-2 text-xs text-[#8a8f91]">
                 <ShieldIcon className="size-4 text-tdev-green" />
-                Chiffrement bancaire de bout en bout
+                Reglement chez FedaPay, aucun numero de carte ici
               </p>
               <button
                 type="button"
                 onClick={retry}
                 className="text-xs font-semibold text-tdev-yellow"
               >
-                Renvoyer le push USSD
+                Reprendre
               </button>
             </div>
           </article>

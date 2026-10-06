@@ -1,19 +1,26 @@
 import { NextResponse } from "next/server";
-import { handleAdminError, requireAdmin } from "@/server/admin-http";
-import { resetAdminUserPassword } from "@/server/shop-store";
+import { requireAdmin, laravelErrorResponse } from "@/server/admin-session";
+import { laravelFetch } from "@/server/laravel";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireAdmin("users");
+  const auth = await requireAdmin(request);
   if (auth.error) {
     return auth.error;
   }
+
+  const { id } = await params;
+
   try {
-    const { id } = await params;
-    return NextResponse.json(resetAdminUserPassword(auth.user, id));
+    const body = (await request.json().catch(() => null)) as unknown;
+    const data = await laravelFetch(request, `/api/v1/admin/users/${id}/reset-password`, {
+      method: "POST",
+      body,
+    });
+    return NextResponse.json(data);
   } catch (error) {
-    return handleAdminError(error);
+    return laravelErrorResponse(error);
   }
 }

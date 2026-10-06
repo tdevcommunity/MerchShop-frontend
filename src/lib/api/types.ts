@@ -55,25 +55,56 @@ export type LaravelOrderItem = {
   totalPrice: number;
 };
 
+/**
+ * Statut numerique d'une commande tel que renvoye par l'API.
+ *
+ * L'API oppose deux representations pour le meme enum : `OrderResource`
+ * expose `status` directement, tandis que `paymentStatus` passe par une closure
+ * typee `?string` qui convertit l'entier en chaine. On accepte donc les deux
+ * formes et on normalise, plutot que de dependre d'un cote ou de l'autre.
+ */
+export type LaravelNumericStatus = number | string;
+
+export type LaravelPayment = {
+  uuid: string;
+  orderId: string | null;
+  participantId: string | null;
+  currency: string | null;
+  amount: number;
+  method: string;
+  provider: string | null;
+  status: LaravelNumericStatus;
+  transactionId: string | null;
+  failureReason: string | null;
+  /** Adresse de reglement chez l'operateur ; presente des l'ouverture. */
+  checkoutUrl: string | null;
+  createdAt: string | null;
+  paidAt: string | null;
+  failedAt: string | null;
+};
+
 export type LaravelOrder = {
   uuid: string;
   orderNumber: string;
-  status: number;
+  status: LaravelNumericStatus;
   fulfillmentMethod: "pickup" | "delivery";
-  pickupStatus?: string | null;
-  pickupTime?: string | null;
-  participantId?: string | null;
+  /** Statut de retrait : chaine (`pending`, ...) et non numerique. */
+  pickupStatus: string | null;
+  pickupTime: string | null;
+  participantId: string | null;
   subTotal: number;
   discount: number;
   deliveryFee: number;
   currency: string;
   total: number;
-  paymentStatus: number;
-  paymentMethod: "mobile_money" | "card" | null;
+  paymentStatus: LaravelNumericStatus | null;
+  paymentMethod: string | null;
   shippingAddress: string | null;
   items: LaravelOrderItem[];
+  payments?: LaravelPayment[];
   guestAccessToken?: string | null;
-  allowedActions?: string[];
+  /** Contenu encode du QR, expose quand la commande a un droit de retrait. */
+  pickupQrPayload?: string | null;
   createdAt: string;
   updatedAt: string;
 };

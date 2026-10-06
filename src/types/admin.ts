@@ -139,19 +139,41 @@ export type AdminPickup = {
   qr: PickupQr | null;
 };
 
+/**
+ * Transitions de statut, alignees sur `OrderService::TRANSITIONS` du backend.
+ *
+ * L'API reste la seule source de verite : `OrderResource` expose
+ * `allowedActions` pour chaque commande, et c'est cette liste que le
+ * back-office doit utiliser. Cette table n'existe que pour les statuts que le
+ * frontend invente et que l'API ne produit pas (`draft`, `processing`,
+ * `shipped`, `completed`, `expired`, `payment_failed`) : ils n'ont donc aucune
+ * transition, plutot qu'un jeu de transitions qui n'existe pas cote serveur.
+ *
+ * Toute divergence ici se paie au guichet : l'API refuse la transition, et
+ * l'echec n'apparait qu'apres avoir affiche un bouton possible.
+ */
 export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  draft: ["awaiting_payment", "cancelled"],
-  awaiting_payment: ["paid", "payment_failed", "cancelled", "expired"],
-  paid: ["processing", "ready_for_pickup", "cancelled", "refunded"],
-  processing: ["ready_for_pickup", "shipped", "cancelled"],
-  ready_for_pickup: ["picked_up", "completed", "shipped"],
-  shipped: ["completed", "picked_up"],
-  picked_up: [],
-  completed: [],
+  // Backend : PENDING_PAYMENT -> PAID | CANCELLED
+  awaiting_payment: ["paid", "cancelled"],
+  // Backend : PAID -> READY_FOR_PICKUP | REFUND_PENDING | REFUNDED
+  paid: ["ready_for_pickup", "refund_pending", "refunded"],
+  // Backend : READY_FOR_PICKUP -> PICKED_UP | REFUND_PENDING | REFUNDED
+  ready_for_pickup: ["picked_up", "refund_pending", "refunded"],
+  // Backend : PICKED_UP -> REFUND_PENDING | REFUNDED
+  picked_up: ["refund_pending", "refunded"],
+  // Backend : REFUND_PENDING -> PAID | READY_FOR_PICKUP | PICKED_UP | REFUNDED
+  refund_pending: ["paid", "ready_for_pickup", "picked_up", "refunded"],
+  // Backend : CANCELLED et REFUNDED sont des etats terminaux.
   cancelled: [],
-  expired: [],
-  payment_failed: ["awaiting_payment", "cancelled"],
   refunded: [],
+
+  // Statuts que l'API ne produit pas : aucune transition cote serveur.
+  draft: [],
+  processing: [],
+  shipped: [],
+  completed: [],
+  expired: [],
+  payment_failed: [],
 };
 
 export type DashboardSnapshot = {

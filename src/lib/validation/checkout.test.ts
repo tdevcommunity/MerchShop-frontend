@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "@/lib/api/errors";
 import {
-  validateCardDetails,
   validateCheckoutDraft,
   validateCustomer,
   validateFulfillment,
@@ -145,27 +144,6 @@ describe("checkout validation", () => {
       }),
     );
     expect(fields.phone).toBeUndefined();
-  });
-
-  it("valide les champs carte mockés", () => {
-    expect(
-      validateCardDetails({
-        holderName: "Ama Koffi",
-        number: "4242424242424242",
-        expiry: "12/99",
-        cvc: "123",
-      }),
-    ).toEqual({});
-    const fields = validateCardDetails({
-      holderName: "",
-      number: "123",
-      expiry: "13/99",
-      cvc: "12",
-    });
-    expect(fields.holderName).toBeTruthy();
-    expect(fields.number).toBeTruthy();
-    expect(fields.expiry).toBeTruthy();
-    expect(fields.cvc).toBeTruthy();
   });
 
   it("accepte un draft retrait Jour J complet", () => {

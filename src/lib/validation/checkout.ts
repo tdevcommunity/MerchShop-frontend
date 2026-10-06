@@ -6,13 +6,6 @@ import { ValidationError } from "@/lib/api/errors";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_PATTERN = /^[0-9+\s().-]{8,20}$/;
 
-export type CardDetailsInput = {
-  holderName: string;
-  number: string;
-  expiry: string;
-  cvc: string;
-};
-
 function phoneError(phone: string, required: boolean): string | undefined {
   const trimmed = phone.trim();
   if (!trimmed) {
@@ -106,39 +99,6 @@ export function validatePayment(draft: CheckoutDraft): Record<string, string> {
       fields.phone = phone;
     }
   }
-  return fields;
-}
-
-export function validateCardDetails(card: CardDetailsInput): Record<string, string> {
-  const fields: Record<string, string> = {};
-  const digits = card.number.replace(/\D/g, "");
-  if (!/^\d{16}$/.test(digits)) {
-    fields.number = "Le numéro de carte doit contenir 16 chiffres.";
-  }
-
-  const expiry = card.expiry.trim();
-  if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry)) {
-    fields.expiry = "La date d'expiration doit être au format MM/AA.";
-  } else {
-    const [monthPart, yearPart] = expiry.split("/");
-    const month = Number(monthPart);
-    const year = 2000 + Number(yearPart);
-    const now = new Date();
-    const currentMonthIndex = now.getFullYear() * 12 + now.getMonth();
-    const cardMonthIndex = year * 12 + (month - 1);
-    if (cardMonthIndex < currentMonthIndex) {
-      fields.expiry = "Cette carte est expirée.";
-    }
-  }
-
-  if (!/^\d{3,4}$/.test(card.cvc.trim())) {
-    fields.cvc = "Le CVC doit contenir 3 ou 4 chiffres.";
-  }
-
-  if (!card.holderName.trim()) {
-    fields.holderName = "Le nom sur la carte est requis.";
-  }
-
   return fields;
 }
 

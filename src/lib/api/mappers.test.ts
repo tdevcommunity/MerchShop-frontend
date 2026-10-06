@@ -108,11 +108,33 @@ describe("API Mappers", () => {
     expect(mapLaravelOrderStatus(4)).toBe("picked_up");
     expect(mapLaravelOrderStatus(5)).toBe("cancelled");
     expect(mapLaravelOrderStatus(6)).toBe("refunded");
+    expect(mapLaravelOrderStatus(7)).toBe("refund_pending");
 
     expect(mapLaravelPaymentStatus(1)).toBe("pending");
     expect(mapLaravelPaymentStatus(2)).toBe("success");
     expect(mapLaravelPaymentStatus(3)).toBe("failed");
     expect(mapLaravelPaymentStatus(4)).toBe("refunded");
+  });
+
+  /*
+   * L'API expose `status` en entier mais fait passer `paymentStatus` par une
+   * closure typee `?string`, qui le convertit en chaine. Comparer directement
+   * avec `case 1:` faisait donc retomber tout paiement sur `unknown`, et une
+   * commande payee en paraissait ne pas l'etre. Les deux formes doivent donner
+   * le meme resultat.
+   */
+  it("lit un statut numerique que l'API renvoie en chaine", () => {
+    expect(mapLaravelOrderStatus("2")).toBe("paid");
+    expect(mapLaravelOrderStatus("7")).toBe("refund_pending");
+    expect(mapLaravelPaymentStatus("1")).toBe("pending");
+    expect(mapLaravelPaymentStatus("2")).toBe("success");
+    expect(mapLaravelPaymentStatus("3")).toBe("failed");
+    expect(mapLaravelPaymentStatus("4")).toBe("refunded");
+  });
+
+  it("ne confond pas un statut absent avec un statut inconnu", () => {
+    expect(mapLaravelPaymentStatus(null)).toBe("unknown");
+    expect(mapLaravelPaymentStatus(undefined)).toBe("unknown");
   });
 
   it("mappe une commande Laravel vers une commande Frontend", () => {
@@ -121,6 +143,9 @@ describe("API Mappers", () => {
       orderNumber: "TDEV-2026-0001",
       status: 2,
       fulfillmentMethod: "pickup",
+      pickupStatus: "pending",
+      pickupTime: null,
+      participantId: null,
       subTotal: 8000,
       discount: 0,
       deliveryFee: 0,

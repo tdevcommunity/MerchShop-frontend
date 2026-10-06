@@ -13,6 +13,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   cancelled: "Annulée",
   expired: "Expirée",
   payment_failed: "Paiement échoué",
+  refund_pending: "Remboursement demandé",
   refunded: "Remboursée",
 };
 

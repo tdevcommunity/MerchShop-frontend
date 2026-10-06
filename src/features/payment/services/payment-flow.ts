@@ -1,33 +1,70 @@
 import { getOrderById } from "@/features/order/services/order-service";
-import { isPaymentSuccess } from "@/features/payment/services/payment-status";
 import type { Order } from "@/types/order";
 
-export async function pollPaymentStatus(
+/**
+ * Attend qu'une commande sorte de l'etat « en attente de reglement ».
+ *
+ * Le reglement n'est etabli que par le webhook FedaPay, donc par une notification
+ * que le navigateur ne declenche pas : l'ordre retourne est une observation, pas
+ * une preuve. Ce qui est observe ici sert uniquement a rediriger vers la bonne
+ * page — la page de confirmation, elle, ne doit rien afficher sans paiement.
+ *
+ * Les intervalles croissent : le webhook arrive en quelques secondes dans le cas
+ * courant, et un rythme constant martelerait l'API pendant tout le reste.
+ */
+const INTERVALS_MS = [1200, 1500, 2000, 2500, 3000, 4000] as const;
+
+export type PaymentOutcome =
+  | { state: "paid"; order: Order }
+  | { state: "failed"; order: Order }
+  | { state: "pending"; order: Order };
+
+function isPaid(order: Order): boolean {
+  return (
+    order.paymentStatus === "success" ||
+    order.status === "paid" ||
+    order.status === "ready_for_pickup" ||
+    order.status === "picked_up"
+  );
+}
+
+function isFailed(order: Order): boolean {
+  return (
+    order.status === "cancelled" ||
+    order.status === "refunded" ||
+    order.status === "refund_pending" ||
+    order.paymentStatus === "failed"
+  );
+}
+
+export async function awaitPaymentOutcome(
   orderId: string,
-  maxWaitMs = 10000,
-  intervalMs = 1500,
-): Promise<Order> {
+  maxWaitMs = 60000,
+): Promise<PaymentOutcome> {
   const startTime = Date.now();
+  let attempt = 0;
+  let lastOrder: Order | null = null;
 
   while (Date.now() - startTime < maxWaitMs) {
     const order = await getOrderById(orderId);
-    if (
-      isPaymentSuccess(order.paymentStatus) ||
-      order.status === "paid" ||
-      order.status === "ready_for_pickup"
-    ) {
-      return order;
+    lastOrder = order;
+
+    if (isPaid(order)) {
+      return { state: "paid", order };
     }
-    if (
-      order.status === "cancelled" ||
-      order.status === "refunded" ||
-      order.paymentStatus === "failed"
-    ) {
-      throw new Error("Le paiement n'a pas abouti. La commande a été annulée.");
+    if (isFailed(order)) {
+      return { state: "failed", order };
     }
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+
+    const interval =
+      INTERVALS_MS[Math.min(attempt, INTERVALS_MS.length - 1)] ?? 4000;
+    attempt += 1;
+    await new Promise((resolve) => setTimeout(resolve, interval));
   }
 
-  // Return last retrieved order state
-  return getOrderById(orderId);
+  // Delai depasse : le webhook n'est pas encore passe. On rend la derniere
+  // observation plutot qu'une erreur, pour que l'interface affiche « en cours »
+  // au lieu d'annoncer un echec qui n'a pas eu lieu.
+  const fallback = lastOrder ?? (await getOrderById(orderId));
+  return { state: "pending", order: fallback };
 }

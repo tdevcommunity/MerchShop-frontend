@@ -20,5 +20,3 @@ export const env = {
   /** Clé navigateur Places (restrict HTTP referrer). Vide = saisie manuelle + géoloc. */
   googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
 };
-
-export const useMockApi = false;

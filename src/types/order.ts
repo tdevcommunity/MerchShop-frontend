@@ -16,6 +16,7 @@ export const ORDER_STATUSES = [
   "cancelled",
   "expired",
   "payment_failed",
+  "refund_pending",
   "refunded",
 ] as const;
 

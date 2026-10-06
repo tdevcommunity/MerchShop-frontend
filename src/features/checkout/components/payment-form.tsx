@@ -19,23 +19,14 @@ import {
 } from "@/features/checkout/hooks/use-checkout-draft";
 import { deliveryLabel } from "@/features/checkout/utils";
 import {
-  validateCardDetails,
   validateFulfillment,
   validateInformation,
   validatePayment,
-  type CardDetailsInput,
 } from "@/lib/validation/checkout";
 import { formatMoney } from "@/lib/utils/format-money";
 import { cn } from "@/lib/utils/cn";
 import type { CheckoutDraft, MobileOperator } from "@/types/checkout";
 import type { PaymentMethod } from "@/types/payment";
-
-const emptyCard: CardDetailsInput = {
-  holderName: "",
-  number: "",
-  expiry: "",
-  cvc: "",
-};
 
 export function PaymentForm() {
   const cart = useCart();
@@ -43,7 +34,6 @@ export function PaymentForm() {
   const { update } = useCheckoutDraftActions();
   const router = useRouter();
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [card, setCard] = useState<CardDetailsInput>(emptyCard);
   const [paying, setPaying] = useState(false);
 
   if (cart.items.length === 0) {
@@ -96,9 +86,6 @@ export function PaymentForm() {
       return;
     }
     const fields = { ...validatePayment(draft) };
-    if (draft.paymentMethod === "card") {
-      Object.assign(fields, validateCardDetails(card));
-    }
     setErrors(fields);
     if (Object.keys(fields).length > 0) {
       return;
@@ -121,14 +108,6 @@ export function PaymentForm() {
       onPhone={(phone) =>
         update({ customer: { ...draft.customer, phone } })
       }
-    />
-  );
-
-  const cardFields = (
-    <CardFields
-      card={card}
-      errors={errors}
-      onChange={setCard}
     />
   );
 
@@ -178,8 +157,8 @@ export function PaymentForm() {
           index="02"
           title="Comment tu paies ?"
         >
-          Choisis un moyen. Les champs s&apos;affichent ensuite, sans empiler
-          tout le formulaire.
+          Choisis un moyen. Le reglement se fait ensuite chez FedaPay : aucune
+          donnee de carte ne transite par ce site.
         </CheckoutStepIntro>
 
         <div className="bg-tdev-anthracite px-[22px] py-5 text-tdev-white lg:hidden">
@@ -216,7 +195,7 @@ export function PaymentForm() {
                   Instantané
                 </span>
               }
-              description="Paiement via Mixx By Yas ou Moov Money. On te demande le numéro ici."
+              description="Tu choisis le reseau et tu valides sur la page FedaPay. Ton numero nous sert a te rattacher a la commande."
             />
 
             <PaymentTile
@@ -233,7 +212,7 @@ export function PaymentForm() {
                   Visa / Mastercard
                 </span>
               }
-              description="Interface mockée. Aucune donnée carte n’est envoyée ni stockée."
+              description="Tu saisis la carte directement chez FedaPay. Ce site ne voit jamais son numéro."
             />
           </div>
 
@@ -249,12 +228,13 @@ export function PaymentForm() {
           {cardSelected ? (
             <section className="motion-panel border border-tdev-anthracite bg-tdev-white p-4 lg:p-8">
               <p className="hidden text-xs font-bold uppercase tracking-[0.2em] text-tdev-muted lg:block">
-                Détails de la carte
+                Reglement par carte
               </p>
-              <p className="mt-0 hidden max-w-xl text-sm text-tdev-muted lg:mt-2 lg:block">
-                Simulation locale uniquement. Rien n’est persisté.
+              <p className="mt-0 max-w-xl text-sm leading-relaxed text-tdev-muted lg:mt-2">
+                Le numero, la date et le CVC se saisissent sur la page
+                FedaPay, qui est le seul a les voir. Ce site n&apos;a besoin
+                que de savoir que tu regles par carte.
               </p>
-              <div className="lg:mt-6 lg:max-w-xl">{cardFields}</div>
             </section>
           ) : null}
 
@@ -323,89 +303,6 @@ function MobileMoneyFields({
       />
     </div>
   );
-}
-
-function CardFields({
-  card,
-  errors,
-  onChange,
-}: {
-  card: CardDetailsInput;
-  errors: Record<string, string>;
-  onChange: (card: CardDetailsInput) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-3">
-      <Input
-        name="cardNumber"
-        label="Numéro de carte"
-        inputMode="numeric"
-        autoComplete="cc-number"
-        placeholder="ACCT-000015"
-        value={card.number}
-        error={errors.number}
-        onChange={(event) =>
-          onChange({ ...card, number: formatCardNumber(event.target.value) })
-        }
-      />
-      <div className="grid grid-cols-2 gap-3">
-        <Input
-          name="cardExpiry"
-          label="Expiration"
-          inputMode="numeric"
-          autoComplete="cc-exp"
-          placeholder="MM/AA"
-          value={card.expiry}
-          error={errors.expiry}
-          onChange={(event) =>
-            onChange({ ...card, expiry: formatCardExpiry(event.target.value) })
-          }
-        />
-        <Input
-          name="cardCvc"
-          label="CVC"
-          inputMode="numeric"
-          autoComplete="cc-csc"
-          placeholder="123"
-          value={card.cvc}
-          error={errors.cvc}
-          onChange={(event) =>
-            onChange({
-              ...card,
-              cvc: event.target.value.replace(/\D/g, "").slice(0, 4),
-            })
-          }
-        />
-      </div>
-      <Input
-        name="cardHolder"
-        label="Nom sur la carte"
-        autoComplete="cc-name"
-        placeholder="AMA KOFFI"
-        value={card.holderName}
-        error={errors.holderName}
-        onChange={(event) =>
-          onChange({ ...card, holderName: event.target.value })
-        }
-      />
-      <p className="text-xs text-tdev-muted lg:hidden">
-        Interface mockée. Aucune donnée carte n&apos;est envoyée ni stockée.
-      </p>
-    </div>
-  );
-}
-
-function formatCardNumber(value: string): string {
-  const digits = value.replace(/\D/g, "").slice(0, 16);
-  return digits.replace(/(\d{4})(?=\d)/g, "$1 ");
-}
-
-function formatCardExpiry(value: string): string {
-  const digits = value.replace(/\D/g, "").slice(0, 4);
-  if (digits.length <= 2) {
-    return digits;
-  }
-  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
 }
 
 function PaymentTile({

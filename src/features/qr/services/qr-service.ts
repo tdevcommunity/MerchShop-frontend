@@ -1,8 +1,6 @@
 import { apiRequestRaw } from "@/lib/api/client";
 import { apiEndpoints } from "@/lib/api/endpoints";
-import { useMockApi } from "@/lib/config/env";
 import type { PickupQr } from "@/types/qr";
-import { getMockPickupQr } from "@/features/order/services/order-mock";
 import {
   cachePickupQr,
   readCachedPickupQr,
@@ -22,17 +20,6 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 }
 
 export async function getPickupQr(orderId: string): Promise<PickupQr> {
-  if (useMockApi) {
-    return (
-      (await getMockPickupQr(orderId)) ?? {
-        orderId,
-        status: "unavailable",
-        imageUrl: null,
-        alt: "QR de retrait indisponible",
-      }
-    );
-  }
-
   const cached = readCachedPickupQr(orderId);
   if (cached?.imageUrl) {
     return cached;

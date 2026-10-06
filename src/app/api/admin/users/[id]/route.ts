@@ -1,40 +1,45 @@
 import { NextResponse } from "next/server";
-import { handleAdminError, requireAdmin } from "@/server/admin-http";
-import { updateAdminUser } from "@/server/shop-store";
-import { ADMIN_ROLES, type AdminRole } from "@/types/admin";
+import { requireAdmin, laravelErrorResponse } from "@/server/admin-session";
+import { laravelFetch } from "@/server/laravel";
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireAdmin(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
+  const { id } = await params;
+
+  try {
+    const data = await laravelFetch(request, `/api/v1/admin/users/${id}`);
+    return NextResponse.json(data);
+  } catch (error) {
+    return laravelErrorResponse(error);
+  }
+}
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireAdmin("users");
+  const auth = await requireAdmin(request);
   if (auth.error) {
     return auth.error;
   }
+
+  const { id } = await params;
+
   try {
-    const { id } = await params;
-    const body = (await request.json().catch(() => null)) as {
-      role?: AdminRole;
-      active?: boolean;
-      name?: string;
-    } | null;
-    if (
-      body?.role !== undefined &&
-      !(ADMIN_ROLES as readonly string[]).includes(body.role)
-    ) {
-      return NextResponse.json(
-        { message: "Rôle invalide. Choisis admin ou staff." },
-        { status: 400 },
-      );
-    }
-    return NextResponse.json(
-      updateAdminUser(auth.user, id, {
-        role: body?.role,
-        active: body?.active,
-        name: body?.name,
-      }),
-    );
+    const body = (await request.json().catch(() => null)) as unknown;
+    const data = await laravelFetch(request, `/api/v1/admin/users/${id}`, {
+      method: "PATCH",
+      body,
+    });
+    return NextResponse.json(data);
   } catch (error) {
-    return handleAdminError(error);
+    return laravelErrorResponse(error);
   }
 }

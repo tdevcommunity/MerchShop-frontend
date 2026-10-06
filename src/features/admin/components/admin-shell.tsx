@@ -17,6 +17,9 @@ const NAV: Array<{ href: string; label: string; roles: AdminRole[] }> = [
   { href: "/admin/orders", label: "Commandes", roles: ["admin", "staff"] },
   { href: "/admin/payments", label: "Paiements", roles: ["admin", "staff"] },
   { href: "/admin/pickups", label: "Retraits", roles: ["admin", "staff"] },
+  { href: "/admin/users", label: "Utilisateurs", roles: ["admin"] },
+  { href: "/admin/audit", label: "Audit", roles: ["admin"] },
+  { href: "/admin/notifications", label: "Alertes", roles: ["admin", "staff"] },
   { href: "/admin/settings", label: "Paramètres", roles: ["admin"] },
 ];
 

@@ -8,11 +8,17 @@ import { TEXTILE_SIZES } from "@/types/catalog";
 import type { CustomerInfo } from "@/types/checkout";
 import type { DeliveryMethod, ShippingAddress } from "@/types/delivery";
 import type { Order, OrderItem, OrderStatus } from "@/types/order";
-import type { PaymentMethod, PaymentStatus } from "@/types/payment";
+import type {
+  Payment,
+  PaymentMethod,
+  PaymentStatus,
+} from "@/types/payment";
 import type {
   LaravelCategory,
+  LaravelNumericStatus,
   LaravelOrder,
   LaravelOrderItem,
+  LaravelPayment,
   LaravelProduct,
   LaravelVariant,
 } from "@/lib/api/types";
@@ -62,8 +68,24 @@ export function mapLaravelProductToProduct(product: LaravelProduct): Product {
   };
 }
 
-export function mapLaravelOrderStatus(status: number): OrderStatus {
-  switch (status) {
+/**
+ * Normalise un statut numerique venu de l'API.
+ *
+ * L'API melange deux representations pour le meme enum : `status` est expose
+ * en entier, mais `paymentStatus` transite par une closure typee `?string` qui
+ * le convertit en chaine. Comparer directement avec `case 1:` echouerait donc
+ * sur la seconde forme et retomberait sur `unknown` ou `awaiting_payment`.
+ */
+function numericStatus(value: LaravelNumericStatus | null | undefined): number | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const parsed = typeof value === "number" ? value : Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function mapLaravelOrderStatus(status: LaravelNumericStatus): OrderStatus {
+  switch (numericStatus(status)) {
     case 1:
       return "awaiting_payment";
     case 2:
@@ -76,13 +98,20 @@ export function mapLaravelOrderStatus(status: number): OrderStatus {
       return "cancelled";
     case 6:
       return "refunded";
+    case 7:
+      // Remboursement demande, argent pas encore sorti : l'API expose cet
+      // etat intermediaire, le confondre avec `refunded` annoncerait une
+      // sortie qui n'a pas eu lieu.
+      return "refund_pending";
     default:
       return "awaiting_payment";
   }
 }
 
-export function mapLaravelPaymentStatus(status: number): PaymentStatus {
-  switch (status) {
+export function mapLaravelPaymentStatus(
+  status: LaravelNumericStatus | null | undefined,
+): PaymentStatus {
+  switch (numericStatus(status)) {
     case 1:
       return "pending";
     case 2:
@@ -127,6 +156,24 @@ export function formatShippingAddress(
   return `${address.line1}${address.line2 ? `, ${address.line2}` : ""}, ${address.city}, ${address.country}`;
 }
 
+/**
+ * Mappe une tentative de paiement FedaPay vers le modele de domaine.
+ *
+ * `checkoutUrl` n'est pas porte par `Payment` : c'est une adresse de passage,
+ * pas un etat. Elle se lit une fois, au moment ou l'on redirige le navigateur
+ * chez l'operateur, et la relire ensuite n'aurait aucun sens.
+ */
+export function mapLaravelPaymentToPayment(payment: LaravelPayment): Payment {
+  return {
+    id: payment.uuid,
+    orderId: payment.orderId ?? "",
+    status: mapLaravelPaymentStatus(payment.status),
+    method: (payment.method as PaymentMethod) || null,
+    amount: payment.amount,
+    providerRef: payment.transactionId,
+  };
+}
+
 export function mapLaravelOrderItemToOrderItem(
   item: LaravelOrderItem,
 ): OrderItem {
@@ -145,6 +192,13 @@ export function mapLaravelOrderItemToOrderItem(
   };
 }
 
+const EMPTY_CUSTOMER: CustomerInfo = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+};
+
 export function mapLaravelOrderToOrder(
   order: LaravelOrder,
   cachedCustomer?: CustomerInfo | null,
@@ -160,12 +214,15 @@ export function mapLaravelOrderToOrder(
     total: order.total,
     paymentStatus: mapLaravelPaymentStatus(order.paymentStatus),
     paymentMethod: (order.paymentMethod as PaymentMethod) || null,
-    customer: cachedCustomer || {
-      firstName: "Participant",
-      lastName: "TDEV",
-      email: "contact@tdev.bj",
-      phone: "+228 00 00 00 00",
-    },
+    /*
+     * L'API n'expose pas l'identite de l'acheteur sur une commande : elle
+     * n'est lue que par l'API, qui s'en sert pour le paiement et la livraison.
+     * On restitue donc ce que l'acheteur a lui-meme saisi au checkout, mis en
+     * cache a la creation, et rien d'autre. Inventer un nom, une adresse ni un
+     * numero ferait afficher a l'acheteur une fausse commande comme si elle
+     * etait la sienne ; vide vaut mieux qu'invente.
+     */
+    customer: cachedCustomer ?? EMPTY_CUSTOMER,
     deliveryMethod,
     shippingAddress: parseShippingAddress(order.shippingAddress),
     pickupLabel:
