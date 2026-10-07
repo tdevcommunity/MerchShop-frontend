@@ -48,6 +48,11 @@ export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Les dates par defaut dependent du fuseau : le serveur (UTC) et le
+  // navigateur peuvent tomber sur deux jours differents (erreur React #418).
+  // On ne les affiche donc qu'une fois la page montee cote navigateur.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const query = useMemo(() => {
     const params = new URLSearchParams({ from, to });
@@ -194,7 +199,7 @@ export default function AdminDashboardPage() {
           </div>
         ) : null}
         <p className="text-xs text-tdev-muted">
-          Période active : {from} → {to}
+          Période active : {mounted ? `${from} → ${to}` : "…"}
           {loading ? " · actualisation…" : ""}
         </p>
       </div>
