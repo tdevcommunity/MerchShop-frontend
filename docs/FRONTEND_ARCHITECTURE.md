@@ -50,7 +50,7 @@ Le frontend n’est **pas** source de vérité pour les prix, stocks, montants d
 - `catalog` — liste produits, mocks, grille
 - `product` — fiche et sélecteur de variantes
 - `cart` — store UX, totaux indicatifs, ajout / retrait
-- `checkout` — workflow coordonnées → réception → récap → paiement
+- `checkout` — workflow réception → coordonnées → paiement → confirmation
 - `order` — détail / confirmation de commande
 - `payment` — statuts de paiement (pending, success, failed…)
 - `qr` — affichage du QR fourni par le backend
@@ -62,13 +62,19 @@ Le frontend n’est **pas** source de vérité pour les prix, stocks, montants d
 
 | URL | Intention |
 |---|---|
-| `/` | Accueil |
+| `/` | Accueil Shop |
 | `/shop` | Catalogue |
 | `/shop/[slug]` | Fiche produit |
-| `/cart` | Panier |
-| `/checkout` | Tunnel d’achat |
+| `/cart` | Panier / sélection |
+| `/checkout` | Redirige vers `/checkout/fulfillment` |
+| `/checkout/fulfillment` | Mode de réception |
+| `/checkout/information` | Coordonnées |
+| `/checkout/payment` | Interface de paiement (mock) |
+| `/checkout/processing` | Paiement en cours (mock) |
 | `/checkout/confirmation?orderId=` | Confirmation post-paiement |
-| `/order/[id]` | Détail commande + QR |
+| `/order/[id]` | Redirige vers la confirmation |
+| `/order/[id]/qr` | QR Pass de retrait |
+| `/order/[id]/receipt` | Reçu digital |
 
 ---
 
@@ -96,7 +102,7 @@ Produits, stocks, commandes, paiement, QR → services + API.
 ### Client
 
 - Panier : `features/cart/store/cart-store.ts` (`localStorage`, `useSyncExternalStore`)
-- Draft checkout : state local du formulaire
+- Draft checkout : `features/checkout/store/checkout-draft-store.ts` (`sessionStorage`)
 - Cache mock commande : `sessionStorage` (uniquement sans backend)
 
 Les totaux panier sont **indicatifs**. Le checkout envoie `productId`, `variantId`, `quantity` — pas un montant opposable.
@@ -160,6 +166,7 @@ Voir `.env.example`.
 | `NEXT_PUBLIC_APP_ENV` | `development` / `test` / `production` |
 | `NEXT_PUBLIC_SITE_URL` | Canonical / Open Graph |
 | `NEXT_PUBLIC_API_BASE_URL` | API backend ; vide = mocks |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Optionnel — Places Autocomplete (clé navigateur restreinte par referrer) |
 
 Aucun secret (clés paiement, JWT privé) n’a sa place en `NEXT_PUBLIC_*`.
 
@@ -175,7 +182,7 @@ npm run test:e2e   # Playwright — npm exec playwright install chromium au beso
 ```
 
 - **Unitaires (Vitest)** : totaux panier, store, validation checkout, erreurs API, statuts paiement, formatage.
-- **E2E** : accueil → catalogue → produit → panier.
+- **E2E** : accueil → catalogue → produit → panier → checkout mocké → QR / reçu.
 
 Le paiement réel n’est jamais utilisé dans les tests.
 

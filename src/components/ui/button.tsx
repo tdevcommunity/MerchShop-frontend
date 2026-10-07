@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils/cn";
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+type ButtonVariant = "primary" | "brand" | "secondary" | "ghost" | "danger";
 type ButtonSize = "sm" | "md" | "lg";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -11,11 +11,13 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variantClass: Record<ButtonVariant, string> = {
   primary:
-    "bg-tdev-yellow text-tdev-black hover:bg-[#ffe84a] focus-visible:ring-tdev-yellow",
+    "bg-tdev-yellow text-tdev-anthracite hover:bg-[#ffe84a] focus-visible:ring-tdev-yellow",
+  brand:
+    "bg-tdev-blue text-tdev-white hover:bg-[#0f4de0] focus-visible:ring-tdev-blue",
   secondary:
-    "bg-tdev-white text-tdev-black border border-tdev-black/15 hover:bg-tdev-black/5 focus-visible:ring-tdev-blue",
+    "bg-tdev-white text-tdev-anthracite border border-tdev-anthracite hover:bg-tdev-surface focus-visible:ring-tdev-blue",
   ghost:
-    "bg-transparent text-tdev-white hover:bg-white/10 focus-visible:ring-tdev-cyan",
+    "bg-transparent text-tdev-anthracite hover:bg-tdev-surface focus-visible:ring-tdev-cyan",
   danger:
     "bg-tdev-orange text-tdev-white hover:bg-[#ff7d3a] focus-visible:ring-tdev-orange",
 };
@@ -23,7 +25,7 @@ const variantClass: Record<ButtonVariant, string> = {
 const sizeClass: Record<ButtonSize, string> = {
   sm: "min-h-10 px-3 text-sm",
   md: "min-h-11 px-4 text-sm",
-  lg: "min-h-12 px-5 text-base",
+  lg: "min-h-14 px-7 text-[15px] font-bold uppercase tracking-[0.375px]",
 };
 
 export function buttonClassName(
@@ -32,8 +34,8 @@ export function buttonClassName(
   className?: string,
 ): string {
   return cn(
-    "inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-tdev-black",
+    "motion-lift motion-press motion-icon-shift inline-flex items-center justify-center gap-2 rounded-none font-medium transition-colors",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-tdev-white",
     "disabled:pointer-events-none disabled:opacity-50",
     variantClass[variant],
     sizeClass[size],

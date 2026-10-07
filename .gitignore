@@ -52,3 +52,10 @@ next-env.d.ts
 # Next.js agent scaffolding (non utilisé par l'équipe)
 AGENTS.md
 CLAUDE.md
+
+# Maquettes Wonder/Figma (référence visuelle locale)
+/ressources
+
+# Store local du BFF admin (dev / test uniquement)
+/.data/
+

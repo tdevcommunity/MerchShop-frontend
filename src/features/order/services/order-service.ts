@@ -1,18 +1,29 @@
 import { apiRequest } from "@/lib/api/client";
 import { apiEndpoints } from "@/lib/api/endpoints";
 import { NotFoundError } from "@/lib/api/errors";
-import { useMockApi } from "@/lib/config/env";
 import type { Order } from "@/types/order";
-import { getMockOrder } from "@/features/order/services/order-mock";
+import { cacheOrder, readCachedOrder } from "@/features/order/store/order-cache";
+import type { LaravelOrder } from "@/lib/api/types";
+import { mapLaravelOrderToOrder } from "@/lib/api/mappers";
 
+/**
+ * Lit une commande chez l'API.
+ *
+ * `apiRequest` deballe deja l'enveloppe `data` : la reponse est donc la
+ * commande elle-meme. Lire `response.data` ici renverrait `undefined` et
+ * ferait passer une commande parfaitement valide pour introuvable.
+ */
 export async function getOrderById(id: string): Promise<Order> {
-  const order = useMockApi
-    ? getMockOrder(id)
-    : await apiRequest<Order>(apiEndpoints.orderById(id));
+  const cached = readCachedOrder(id);
 
-  if (!order) {
+  const rawOrder = await apiRequest<LaravelOrder>(apiEndpoints.orderById(id));
+
+  if (!rawOrder?.uuid) {
     throw new NotFoundError("Cette commande est introuvable.");
   }
+
+  const order = mapLaravelOrderToOrder(rawOrder, cached?.customer);
+  cacheOrder(order);
 
   return order;
 }

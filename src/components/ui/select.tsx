@@ -22,7 +22,10 @@ export function Select({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={selectId} className="text-sm font-medium text-tdev-white">
+      <label
+        htmlFor={selectId}
+        className="text-sm font-medium text-tdev-anthracite"
+      >
         {label}
       </label>
       <select
@@ -30,20 +33,25 @@ export function Select({
         aria-invalid={Boolean(error)}
         aria-describedby={errorId}
         className={cn(
-          "min-h-11 w-full rounded-md border bg-tdev-anthracite px-3 text-tdev-white",
+          "min-h-[50px] w-full rounded-none border bg-tdev-white px-3 text-tdev-anthracite",
+          "transition-[border-color,box-shadow] duration-150",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tdev-blue",
-          error ? "border-tdev-orange" : "border-white/15",
+          error ? "border-tdev-orange" : "border-tdev-anthracite",
           className,
         )}
         {...props}
       >
         {placeholder ? (
-          <option value="" className="text-tdev-black">
+          <option value="" className="text-tdev-anthracite">
             {placeholder}
           </option>
         ) : null}
         {options.map((option) => (
-          <option key={option.value} value={option.value} className="text-tdev-black">
+          <option
+            key={option.value}
+            value={option.value}
+            className="text-tdev-anthracite"
+          >
             {option.label}
           </option>
         ))}

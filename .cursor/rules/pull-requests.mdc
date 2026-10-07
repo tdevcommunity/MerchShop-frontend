@@ -1,0 +1,10 @@
+---
+description: Style des Pull Requests GitHub
+alwaysApply: true
+---
+
+# Pull Requests
+
+- Ne jamais ajouter « Made with Cursor », un footer Cursor, ni une attribution d'outil en fin de PR.
+- Dans les titres et descriptions de PR, utiliser le tiret `-` (pas le cadratin `—`).
+- Suivre le template `.github/PULL_REQUEST_TEMPLATE.md` et cibler `develop`.

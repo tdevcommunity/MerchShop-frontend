@@ -1,17 +1,23 @@
 import type { MoneyAmount } from "./money";
 import type { DeliveryMethod, ShippingAddress } from "./delivery";
-import type { PaymentStatus } from "./payment";
+import type { PaymentMethod, PaymentStatus } from "./payment";
 import type { TextileSize } from "./catalog";
+import type { CustomerInfo } from "./checkout";
 
 export const ORDER_STATUSES = [
   "draft",
   "awaiting_payment",
   "paid",
+  "processing",
   "ready_for_pickup",
   "shipped",
+  "picked_up",
   "completed",
   "cancelled",
   "expired",
+  "payment_failed",
+  "refund_pending",
+  "refunded",
 ] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -34,6 +40,8 @@ export type Order = {
   items: OrderItem[];
   total: MoneyAmount;
   paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod | null;
+  customer: CustomerInfo;
   deliveryMethod: DeliveryMethod;
   shippingAddress: ShippingAddress | null;
   pickupLabel: string | null;

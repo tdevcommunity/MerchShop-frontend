@@ -9,10 +9,12 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <ErrorState
-      title="Une erreur est survenue"
-      description="Le Shop a rencontré un problème inattendu."
-      onRetry={reset}
-    />
+    <div className="px-5 py-10 lg:px-12">
+      <ErrorState
+        title="Une erreur est survenue"
+        description="Le Shop a rencontré un problème inattendu."
+        onRetry={reset}
+      />
+    </div>
   );
 }

@@ -4,6 +4,7 @@ export const PAYMENT_STATUSES = [
   "success",
   "failed",
   "cancelled",
+  "refunded",
   "unknown",
 ] as const;
 
