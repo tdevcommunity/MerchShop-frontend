@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
-import { adminRequest } from "@/features/admin/services/admin-client";
+import { adminRequest, adminList } from "@/features/admin/services/admin-client";
 import type { AdminPickup } from "@/types/admin";
 
 export default function AdminPickupsPage() {
@@ -15,13 +15,13 @@ export default function AdminPickupsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
-    void adminRequest<AdminPickup[]>("/api/admin/pickups")
+    void adminList<AdminPickup>("/api/admin/pickups")
       .then(setRows)
       .catch((loadError: Error) => setError(loadError.message));
   }, []);
 
   async function load() {
-    setRows(await adminRequest<AdminPickup[]>("/api/admin/pickups"));
+    setRows(await adminList<AdminPickup>("/api/admin/pickups"));
   }
 
   const filtered = useMemo(() => {

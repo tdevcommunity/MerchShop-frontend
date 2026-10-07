@@ -8,7 +8,7 @@ import { AdminAction } from "@/features/admin/components/admin-action";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
-import { adminRequest } from "@/features/admin/services/admin-client";
+import { adminRequest, adminList } from "@/features/admin/services/admin-client";
 import type {
   AdminInviteResult,
   AdminNotification,
@@ -36,9 +36,9 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     void Promise.all([
-      adminRequest<AdminUserPublic[]>("/api/admin/users"),
-      adminRequest<AuditLog[]>("/api/admin/audit"),
-      adminRequest<AdminNotification[]>("/api/admin/notifications"),
+      adminList<AdminUserPublic>("/api/admin/users"),
+      adminList<AuditLog>("/api/admin/audit"),
+      adminList<AdminNotification>("/api/admin/notifications"),
     ])
       .then(([nextUsers, nextAudit, nextNotes]) => {
         setUsers(nextUsers);
@@ -49,11 +49,11 @@ export default function AdminSettingsPage() {
   }, []);
 
   async function loadUsers() {
-    setUsers(await adminRequest<AdminUserPublic[]>("/api/admin/users"));
+    setUsers(await adminList<AdminUserPublic>("/api/admin/users"));
   }
 
   async function markRead() {
-    const next = await adminRequest<AdminNotification[]>("/api/admin/notifications", {
+    const next = await adminList<AdminNotification>("/api/admin/notifications", {
       method: "PATCH",
     });
     setNotes(next);
@@ -78,8 +78,8 @@ export default function AdminSettingsPage() {
       setInviteEmail("");
       setInviteRole("staff");
       await loadUsers();
-      setAudit(await adminRequest<AuditLog[]>("/api/admin/audit"));
-      setNotes(await adminRequest<AdminNotification[]>("/api/admin/notifications"));
+      setAudit(await adminList<AuditLog>("/api/admin/audit"));
+      setNotes(await adminList<AdminNotification>("/api/admin/notifications"));
     } catch (inviteError) {
       setError(inviteError instanceof Error ? inviteError.message : "Invitation impossible.");
     } finally {
@@ -100,7 +100,7 @@ export default function AdminSettingsPage() {
       setUsers((current) =>
         (current ?? []).map((user) => (user.id === id ? updated : user)),
       );
-      setAudit(await adminRequest<AuditLog[]>("/api/admin/audit"));
+      setAudit(await adminList<AuditLog>("/api/admin/audit"));
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Mise à jour impossible.");
     }
@@ -115,7 +115,7 @@ export default function AdminSettingsPage() {
         { method: "POST" },
       );
       setInviteResult(result);
-      setAudit(await adminRequest<AuditLog[]>("/api/admin/audit"));
+      setAudit(await adminList<AuditLog>("/api/admin/audit"));
     } catch (resetError) {
       setError(
         resetError instanceof Error

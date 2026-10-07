@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { BrandMark } from "@/components/layout/brand-mark";
 import { Button } from "@/components/ui/button";
-import { adminRequest } from "@/features/admin/services/admin-client";
+import { adminRequest, adminList } from "@/features/admin/services/admin-client";
 import { cn } from "@/lib/utils/cn";
 import type { AdminNotification, AdminRole, AdminSessionUser } from "@/types/admin";
 
@@ -78,7 +78,7 @@ export function AdminShell({ children }: AdminShellProps) {
     void adminRequest<AdminSessionUser>("/api/admin/me")
       .then(setUser)
       .catch(() => router.replace("/admin/login"));
-    void adminRequest<AdminNotification[]>("/api/admin/notifications").then(setNotes);
+    void adminList<AdminNotification>("/api/admin/notifications").then(setNotes);
   }, [router]);
 
   useEffect(() => {

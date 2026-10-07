@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
-import { adminRequest } from "@/features/admin/services/admin-client";
+import { adminRequest, adminList } from "@/features/admin/services/admin-client";
 import { cn } from "@/lib/utils/cn";
 import { INVENTORY_REASONS, type InventoryLog, type InventoryReason } from "@/types/admin";
 
@@ -57,8 +57,8 @@ export default function AdminInventoryPage() {
 
   useEffect(() => {
     void Promise.all([
-      adminRequest<InventoryRow[]>("/api/admin/inventory"),
-      adminRequest<InventoryLog[]>("/api/admin/inventory?history=1"),
+      adminList<InventoryRow>("/api/admin/inventory"),
+      adminList<InventoryLog>("/api/admin/inventory?history=1"),
     ])
       .then(([inventory, history]) => {
         setRows(inventory);
@@ -79,8 +79,8 @@ export default function AdminInventoryPage() {
 
   async function load() {
     const [inventory, history] = await Promise.all([
-      adminRequest<InventoryRow[]>("/api/admin/inventory"),
-      adminRequest<InventoryLog[]>("/api/admin/inventory?history=1"),
+      adminList<InventoryRow>("/api/admin/inventory"),
+      adminList<InventoryLog>("/api/admin/inventory?history=1"),
     ]);
     setRows(inventory);
     setLogs(history);

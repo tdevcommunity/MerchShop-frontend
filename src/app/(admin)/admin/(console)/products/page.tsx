@@ -7,7 +7,7 @@ import { AdminAction, AdminActionLink } from "@/features/admin/components/admin-
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
-import { adminRequest } from "@/features/admin/services/admin-client";
+import { adminRequest, adminList } from "@/features/admin/services/admin-client";
 import { formatMoney } from "@/lib/utils/format-money";
 import type { AdminProduct } from "@/types/admin";
 
@@ -18,13 +18,13 @@ export default function AdminProductsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
-    void adminRequest<AdminProduct[]>("/api/admin/products")
+    void adminList<AdminProduct>("/api/admin/products")
       .then(setProducts)
       .catch((loadError: Error) => setError(loadError.message));
   }, []);
 
   async function load() {
-    setProducts(await adminRequest<AdminProduct[]>("/api/admin/products"));
+    setProducts(await adminList<AdminProduct>("/api/admin/products"));
   }
 
   const rows = useMemo(() => {
