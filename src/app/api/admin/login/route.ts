@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { laravelFetch, laravelLogin, LaravelError } from "@/server/laravel";
+import { grantAdminAccess } from "@/server/admin-access";
 import { unauthenticated } from "@/server/admin-session";
+import { laravelFetch, laravelLogin, LaravelError } from "@/server/laravel";
 
 /**
  * La connexion du back-office.
@@ -81,6 +82,14 @@ export async function POST(request: Request) {
   for (const cookie of setCookies) {
     response.headers.append("Set-Cookie", cookie);
   }
+
+  /*
+   * Le marqueur d'acces, en plus des cookies de l'API. Sans lui, la navigation
+   * vers le tableau de bord est refusee par le middleware : le nom du cookie de
+   * session de Laravel change d'un environnement a l'autre, donc le middleware
+   * ne peut pas se fier a ce nom. Voir `src/server/admin-access.ts`.
+   */
+  grantAdminAccess(response);
 
   return response;
 }
