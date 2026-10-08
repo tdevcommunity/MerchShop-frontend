@@ -36,6 +36,10 @@ export function mapLaravelVariantToProductVariant(
   variant: LaravelVariant,
   productId: string,
 ): ProductVariant {
+  const raw = variant as LaravelVariant & {
+    low_stock_threshold?: number;
+    is_available?: boolean;
+  };
   const isTextileSize =
     variant.size && (TEXTILE_SIZES as readonly string[]).includes(variant.size);
 
@@ -45,12 +49,17 @@ export function mapLaravelVariantToProductVariant(
     size: isTextileSize ? (variant.size as TextileSize) : null,
     color: variant.color,
     sku: variant.sku,
-    stockQuantity: variant.stock,
-    unitPrice: variant.price,
+    stockQuantity: raw.stock ?? 0,
+    unitPrice: raw.price ?? 0,
   };
 }
 
 export function mapLaravelProductToProduct(product: LaravelProduct): Product {
+  const raw = product as LaravelProduct & {
+    image_url?: string | null;
+    variants?: LaravelVariant[];
+    category?: LaravelProduct["category"];
+  };
   const variants = (product.variants || []).map((v) =>
     mapLaravelVariantToProductVariant(v, product.uuid),
   );
@@ -62,7 +71,7 @@ export function mapLaravelProductToProduct(product: LaravelProduct): Product {
     description: product.description || "",
     category: product.category?.slug || "",
     categoryLabel: product.category?.name,
-    imageUrl: product.imageUrl,
+    imageUrl: raw.image_url ?? raw.imageUrl ?? null,
     badge: null,
     variants,
   };

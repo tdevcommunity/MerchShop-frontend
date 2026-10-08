@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { ProductForm } from "@/features/admin/components/product-form";
-import { adminRequest } from "@/features/admin/services/admin-client";
+import { adminList } from "@/features/admin/services/admin-client";
 import type { AdminCategory } from "@/types/admin";
 
 export default function AdminNewProductPage() {
@@ -12,7 +12,7 @@ export default function AdminNewProductPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void adminRequest<AdminCategory[]>("/api/admin/categories")
+    void adminList<AdminCategory>("/api/admin/categories")
       .then(setCategories)
       .catch((loadError: Error) => setError(loadError.message));
   }, []);

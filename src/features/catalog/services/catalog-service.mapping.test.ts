@@ -43,6 +43,39 @@ const rawProducts: LaravelProduct[] = [
   },
 ];
 
+describe("mappe les champs image Laravel", () => {
+  it("utilise image_url pour le catalogue public", async () => {
+    apiRequestMock.mockResolvedValue([
+      {
+        ...rawProducts[0],
+        imageUrl: undefined,
+        image_url: "https://res.cloudinary.com/demo/image/upload/tdev.jpg",
+      },
+    ]);
+
+    const products = await listProducts();
+
+    expect(products[0]?.imageUrl).toBe(
+      "https://res.cloudinary.com/demo/image/upload/tdev.jpg",
+    );
+  });
+
+  it("conserve aussi le format camelCase de l'API normalisée", async () => {
+    apiRequestMock.mockResolvedValue([
+      {
+        ...rawProducts[0],
+        imageUrl: "https://res.cloudinary.com/demo/image/upload/tdev.jpg",
+      },
+    ]);
+
+    const products = await listProducts();
+
+    expect(products[0]?.imageUrl).toBe(
+      "https://res.cloudinary.com/demo/image/upload/tdev.jpg",
+    );
+  });
+});
+
 const apiRequestMock = vi.fn();
 
 vi.mock("@/lib/api/client", () => ({

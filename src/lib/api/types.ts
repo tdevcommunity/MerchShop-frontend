@@ -19,6 +19,7 @@ export type LaravelVariant = {
   stock: number;
   status: string;
   isAvailable: boolean;
+  low_stock_threshold?: number;
 };
 
 export type LaravelProduct = {
@@ -26,6 +27,7 @@ export type LaravelProduct = {
   name: string;
   description: string;
   imageUrl: string | null;
+  image_url?: string | null;
   slug: string;
   status: string;
   category: {
@@ -35,6 +37,9 @@ export type LaravelProduct = {
   } | null;
   variants?: LaravelVariant[];
   variantsCount?: number | null;
+  variants_count?: number | null;
+  price_from?: number | null;
+  is_available?: boolean;
   priceFrom?: number | null;
   isAvailable?: boolean;
   createdAt?: string;

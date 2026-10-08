@@ -238,7 +238,7 @@ async function call(
 
   const headers: Record<string, string> = { Accept: "application/json" };
 
-  if (options.body !== undefined) {
+  if (options.body !== undefined && !(options.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
 
@@ -261,7 +261,12 @@ async function call(
   const response = await fetch(BASE_URL + path + toQueryString(options.search), {
     method,
     headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body:
+      options.body === undefined
+        ? undefined
+        : options.body instanceof FormData
+          ? options.body
+          : JSON.stringify(options.body),
     /*
      * Jamais de cache sur une reponse d'authentification : le cache HTTP ignore
      * les cookies, donc deux guichetiers consecutifs se partageraient la
@@ -315,6 +320,25 @@ export async function laravelFetch<T>(
   const { body } = await call(request, path, options);
 
   return readData<T>(body);
+}
+
+/**
+ * Un appel a l'API, corps rendu tel quel — enveloppe `data` comprise.
+ *
+ * `laravelFetch` retire l'enveloppe, ce qui convient a une ressource seule et
+ * non a une reponse qui porte un second message a cote : l'invitation d'un
+ * compte renvoie le compte sous `data` ET le mot de passe temporaire a cote.
+ * L'enveloppe retiree emporterait le mot de passe avec elle, et
+ * l'administrateur n'aurait plus rien a transmettre.
+ */
+export async function laravelFetchEnvelope<T>(
+  request: Request,
+  path: string,
+  options: CallOptions = {},
+): Promise<T> {
+  const { body } = await call(request, path, options);
+
+  return body as T;
 }
 
 /**

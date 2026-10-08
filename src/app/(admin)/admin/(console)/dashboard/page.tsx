@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/features/admin/components/page-header";
+import { formatAdminDate } from "@/features/admin/labels";
 import { adminRequest } from "@/features/admin/services/admin-client";
 import { cn } from "@/lib/utils/cn";
 import { formatMoney } from "@/lib/utils/format-money";
@@ -108,8 +109,8 @@ export default function AdminDashboardPage() {
         { label: "Stock faible", value: String(data.lowStockProducts), period: false },
       ]
     : [];
-  const maxSale = Math.max(...(data?.salesByDay.map((day) => day.amount) ?? [0]), 1);
-  const chartDense = (data?.salesByDay.length ?? 0) > 14;
+  const maxSale = Math.max(...(data?.salesByDay?.map((day) => day.amount) ?? [0]), 1);
+  const chartDense = (data?.salesByDay?.length ?? 0) > 14;
 
   return (
     <div>
@@ -230,7 +231,7 @@ export default function AdminDashboardPage() {
                 Ventes sur la période
               </h2>
               <div className="mt-4 flex h-40 items-end gap-1 overflow-x-auto">
-                {data.salesByDay.map((day) => (
+                {(data.salesByDay ?? []).map((day) => (
                   <div
                     key={day.date}
                     className={cn(
@@ -244,7 +245,7 @@ export default function AdminDashboardPage() {
                       style={{ height: `${Math.max(8, (day.amount / maxSale) * 100)}%` }}
                     />
                     {!chartDense ? (
-                      <span className="text-[10px] text-tdev-muted">{day.date.slice(5)}</span>
+                      <span className="text-[10px] text-tdev-muted">{formatAdminDate(day.date).slice(5)}</span>
                     ) : null}
                   </div>
                 ))}
@@ -252,11 +253,11 @@ export default function AdminDashboardPage() {
             </section>
             <section className="border border-tdev-anthracite bg-tdev-white p-5">
               <h2 className="font-headline text-lg font-extrabold uppercase">Top produits</h2>
-              {data.topProducts.length === 0 ? (
+              {(data.topProducts ?? []).length === 0 ? (
                 <p className="mt-4 text-sm text-tdev-muted">Aucune vente sur cette période.</p>
               ) : (
                 <ul className="mt-4 divide-y divide-tdev-border">
-                  {data.topProducts.map((product) => (
+                  {(data.topProducts ?? []).map((product) => (
                     <li key={product.name} className="flex justify-between py-2 text-sm">
                       <span>{product.name}</span>
                       <span className="font-bold">
@@ -271,11 +272,11 @@ export default function AdminDashboardPage() {
           <section className="mt-6 border border-tdev-anthracite bg-tdev-white p-5">
             <h2 className="font-headline text-lg font-extrabold uppercase">Alertes stock</h2>
             <p className="mt-1 text-xs text-tdev-muted">État actuel, indépendant de la période.</p>
-            {data.lowStock.length === 0 ? (
+            {(data.lowStock ?? []).length === 0 ? (
               <p className="mt-4 text-sm text-tdev-muted">Aucun produit proche de la rupture.</p>
             ) : (
               <ul className="mt-4 divide-y divide-tdev-border text-sm">
-                {data.lowStock.map((row) => (
+                {(data.lowStock ?? []).map((row) => (
                   <li key={row.sku} className="flex justify-between py-2">
                     <span>
                       {row.productName} · {row.sku}

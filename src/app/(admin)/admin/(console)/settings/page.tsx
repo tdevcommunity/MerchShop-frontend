@@ -8,11 +8,14 @@ import { AdminAction } from "@/features/admin/components/admin-action";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
-import { adminRequest } from "@/features/admin/services/admin-client";
+import { adminRequest, adminList } from "@/features/admin/services/admin-client";
+import { formatAdminDate } from "@/features/admin/labels";
+import { formatAuditValue } from "@/lib/utils/format-audit-value";
 import type {
   AdminInviteResult,
   AdminNotification,
   AdminRole,
+  AdminUserCreated,
   AdminUserPublic,
   AuditLog,
 } from "@/types/admin";
@@ -36,9 +39,9 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     void Promise.all([
-      adminRequest<AdminUserPublic[]>("/api/admin/users"),
-      adminRequest<AuditLog[]>("/api/admin/audit"),
-      adminRequest<AdminNotification[]>("/api/admin/notifications"),
+      adminList<AdminUserPublic>("/api/admin/users"),
+      adminList<AuditLog>("/api/admin/audit"),
+      adminList<AdminNotification>("/api/admin/notifications"),
     ])
       .then(([nextUsers, nextAudit, nextNotes]) => {
         setUsers(nextUsers);
@@ -49,14 +52,7 @@ export default function AdminSettingsPage() {
   }, []);
 
   async function loadUsers() {
-    setUsers(await adminRequest<AdminUserPublic[]>("/api/admin/users"));
-  }
-
-  async function markRead() {
-    const next = await adminRequest<AdminNotification[]>("/api/admin/notifications", {
-      method: "PATCH",
-    });
-    setNotes(next);
+    setUsers(await adminList<AdminUserPublic>("/api/admin/users"));
   }
 
   async function invite(event: FormEvent) {
@@ -65,7 +61,7 @@ export default function AdminSettingsPage() {
     setError(null);
     setInviteResult(null);
     try {
-      const result = await adminRequest<AdminInviteResult>("/api/admin/users", {
+      const created = await adminRequest<AdminUserCreated>("/api/admin/users", {
         method: "POST",
         body: {
           name: inviteName,
@@ -73,13 +69,16 @@ export default function AdminSettingsPage() {
           role: inviteRole,
         },
       });
-      setInviteResult(result);
+      setInviteResult({
+        user: created.data,
+        temporaryPassword: created.temporaryPassword,
+      });
       setInviteName("");
       setInviteEmail("");
       setInviteRole("staff");
       await loadUsers();
-      setAudit(await adminRequest<AuditLog[]>("/api/admin/audit"));
-      setNotes(await adminRequest<AdminNotification[]>("/api/admin/notifications"));
+      setAudit(await adminList<AuditLog>("/api/admin/audit"));
+      setNotes(await adminList<AdminNotification>("/api/admin/notifications"));
     } catch (inviteError) {
       setError(inviteError instanceof Error ? inviteError.message : "Invitation impossible.");
     } finally {
@@ -89,7 +88,7 @@ export default function AdminSettingsPage() {
 
   async function patchUser(
     id: string,
-    body: Partial<Pick<AdminUserPublic, "role" | "active">>,
+    body: Partial<Pick<AdminUserPublic, "role" | "status">>,
   ) {
     setError(null);
     try {
@@ -98,9 +97,9 @@ export default function AdminSettingsPage() {
         body,
       });
       setUsers((current) =>
-        (current ?? []).map((user) => (user.id === id ? updated : user)),
+        (current ?? []).map((user) => (user.uuid === id ? updated : user)),
       );
-      setAudit(await adminRequest<AuditLog[]>("/api/admin/audit"));
+      setAudit(await adminList<AuditLog>("/api/admin/audit"));
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Mise à jour impossible.");
     }
@@ -110,12 +109,15 @@ export default function AdminSettingsPage() {
     setError(null);
     setInviteResult(null);
     try {
-      const result = await adminRequest<AdminInviteResult>(
+      const reset = await adminRequest<AdminUserCreated>(
         `/api/admin/users/${id}/reset-password`,
         { method: "POST" },
       );
-      setInviteResult(result);
-      setAudit(await adminRequest<AuditLog[]>("/api/admin/audit"));
+      setInviteResult({
+        user: reset.data,
+        temporaryPassword: reset.temporaryPassword,
+      });
+      setAudit(await adminList<AuditLog>("/api/admin/audit"));
     } catch (resetError) {
       setError(
         resetError instanceof Error
@@ -177,7 +179,7 @@ export default function AdminSettingsPage() {
                   Identifiants à transmettre
                 </p>
                 <p className="mt-2">
-                  {inviteResult.user.name} ({inviteResult.user.email}) ·{" "}
+                  {inviteResult.user.fullName} ({inviteResult.user.email}) ·{" "}
                   {ADMIN_ROLE_LABELS[inviteResult.user.role]}
                 </p>
                 <p className="mt-2 font-mono text-base tracking-wide text-tdev-anthracite">
@@ -206,16 +208,16 @@ export default function AdminSettingsPage() {
                 </thead>
                 <tbody>
                   {users.map((user) => (
-                    <tr key={user.id} className="border-t border-tdev-border">
-                      <td className="py-2">{user.name}</td>
+                    <tr key={user.uuid} className="border-t border-tdev-border">
+                      <td className="py-2">{user.fullName}</td>
                       <td>{user.email}</td>
                       <td>
                         <select
-                          aria-label={`Rôle de ${user.name}`}
+                          aria-label={`Rôle de ${user.fullName}`}
                           className="min-h-9 border border-tdev-anthracite bg-tdev-white px-2 text-sm"
                           value={user.role}
                           onChange={(event) =>
-                            void patchUser(user.id, {
+                            void patchUser(user.uuid, {
                               role: event.target.value as AdminRole,
                             })
                           }
@@ -228,20 +230,20 @@ export default function AdminSettingsPage() {
                         </select>
                       </td>
                       <td>
-                        <StatusBadge value={user.active ? "active" : "inactive"} />
+                        <StatusBadge value={user.status === 1 ? "active" : "inactive"} />
                       </td>
                       <td>
                         <div className="flex flex-wrap gap-2 py-2">
                           <AdminAction
-                            tone={user.active ? "danger" : "success"}
+                            tone={user.status === 1 ? "danger" : "success"}
                             onClick={() =>
-                              void patchUser(user.id, { active: !user.active })
+                              void patchUser(user.uuid, { status: user.status === 1 ? 0 : 1 })
                             }
                           >
-                            {user.active ? "Désactiver" : "Réactiver"}
+                            {user.status === 1 ? "Désactiver" : "Réactiver"}
                           </AdminAction>
-                          {user.active ? (
-                            <AdminAction onClick={() => void resetPassword(user.id)}>
+                          {user.status === 1 ? (
+                            <AdminAction onClick={() => void resetPassword(user.uuid)}>
                               Nouveau MDP
                             </AdminAction>
                           ) : null}
@@ -258,12 +260,7 @@ export default function AdminSettingsPage() {
             </p>
           </section>
           <section className="border border-tdev-anthracite bg-tdev-white p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="font-headline text-lg font-extrabold uppercase">Notifications</h2>
-              <Button size="sm" variant="secondary" onClick={() => void markRead()}>
-                Tout marquer lu
-              </Button>
-            </div>
+            <h2 className="font-headline text-lg font-extrabold uppercase">Notifications</h2>
             <ul className="mt-3 divide-y divide-tdev-border text-sm">
               {notes.length === 0 ? (
                 <li className="py-2 text-tdev-muted">Aucune alerte.</li>
@@ -295,9 +292,9 @@ export default function AdminSettingsPage() {
                   </thead>
                   <tbody>
                     {audit.slice(0, 30).map((log) => (
-                      <tr key={log.id} className="border-t border-tdev-border">
+                      <tr key={log.uuid} className="border-t border-tdev-border">
                         <td className="py-2 text-tdev-muted">
-                          {log.createdAt.slice(0, 16).replace("T", " ")}
+                          {formatAdminDate(log.createdAt)}
                         </td>
                         <td>{log.userEmail}</td>
                         <td>{log.action}</td>
@@ -305,7 +302,7 @@ export default function AdminSettingsPage() {
                           {log.resource} {log.resourceId}
                         </td>
                         <td className="max-w-xs truncate text-xs">
-                          {log.oldValue ?? "—"} → {log.newValue ?? "—"}
+                          {formatAuditValue(log.oldValue)} → {formatAuditValue(log.newValue)}
                         </td>
                       </tr>
                     ))}
