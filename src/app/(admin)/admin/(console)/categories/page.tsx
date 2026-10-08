@@ -34,7 +34,9 @@ export default function AdminCategoriesPage() {
     try {
       await adminRequest("/api/admin/categories", {
         method: "POST",
-        body: { label, slug },
+        // Une categorie ajoutee au guichet est publiee d'office : `active`
+        // dit au BFF d'envoyer `status: 1`, jamais un statut devine a 0.
+        body: { label, slug, active: true },
       });
       setLabel("");
       setSlug("");
