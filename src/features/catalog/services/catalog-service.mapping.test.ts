@@ -59,6 +59,21 @@ describe("mappe les champs image Laravel", () => {
       "https://res.cloudinary.com/demo/image/upload/tdev.jpg",
     );
   });
+
+  it("conserve aussi le format camelCase de l'API normalisée", async () => {
+    apiRequestMock.mockResolvedValue([
+      {
+        ...rawProducts[0],
+        imageUrl: "https://res.cloudinary.com/demo/image/upload/tdev.jpg",
+      },
+    ]);
+
+    const products = await listProducts();
+
+    expect(products[0]?.imageUrl).toBe(
+      "https://res.cloudinary.com/demo/image/upload/tdev.jpg",
+    );
+  });
 });
 
 const apiRequestMock = vi.fn();
