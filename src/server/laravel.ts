@@ -238,7 +238,7 @@ async function call(
 
   const headers: Record<string, string> = { Accept: "application/json" };
 
-  if (options.body !== undefined) {
+  if (options.body !== undefined && !(options.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
 
@@ -261,7 +261,12 @@ async function call(
   const response = await fetch(BASE_URL + path + toQueryString(options.search), {
     method,
     headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body:
+      options.body === undefined
+        ? undefined
+        : options.body instanceof FormData
+          ? options.body
+          : JSON.stringify(options.body),
     /*
      * Jamais de cache sur une reponse d'authentification : le cache HTTP ignore
      * les cookies, donc deux guichetiers consecutifs se partageraient la

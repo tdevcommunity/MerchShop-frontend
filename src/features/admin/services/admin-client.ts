@@ -18,10 +18,12 @@ export async function adminRequest<T>(
     credentials: "include",
     headers: {
       Accept: "application/json",
-      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(body !== undefined && !(body instanceof FormData)
+        ? { "Content-Type": "application/json" }
+        : {}),
       ...headers,
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (!response.ok) {
     let message = "Impossible de traiter la demande.";

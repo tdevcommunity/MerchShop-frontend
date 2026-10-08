@@ -37,6 +37,19 @@ function toLaravelProductPayload(body: Record<string, unknown>) {
   };
 }
 
+function appendFields(form: FormData, value: unknown, key: string) {
+  if (value === undefined || value === null) return;
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => appendFields(form, item, `${key}[${index}]`));
+  } else if (typeof value === "object") {
+    Object.entries(value as Record<string, unknown>).forEach(([childKey, childValue]) =>
+      appendFields(form, childValue, `${key}[${childKey}]`),
+    );
+  } else {
+    form.append(key, String(value));
+  }
+}
+
 export async function GET(request: Request) {
   const auth = await requireAdmin(request);
   if (auth.error) return auth.error;
@@ -63,11 +76,29 @@ export async function POST(request: Request) {
   if (auth.error) return auth.error;
 
   try {
-    const body = (await request.json().catch(() => null)) as Record<string, unknown>;
+    let body: Record<string, unknown>;
+    let image: File | undefined;
+    if (request.headers.get("content-type")?.includes("multipart/form-data")) {
+      const form = await request.formData();
+      body = JSON.parse(String(form.get("payload") ?? "{}")) as Record<string, unknown>;
+      const candidate = form.get("image");
+      image = candidate instanceof File ? candidate : undefined;
+    } else {
+      body = (await request.json().catch(() => null)) as Record<string, unknown>;
+    }
+    const payload = toLaravelProductPayload(body);
+    if (image) {
+      const multipart = new FormData();
+      Object.entries(payload).forEach(([key, value]) => appendFields(multipart, value, key));
+      multipart.append("image", image, image.name);
+      return NextResponse.json(
+        await laravelFetch(request, "/api/v1/products", { method: "POST", body: multipart }),
+      );
+    }
     return NextResponse.json(
       await laravelFetch(request, "/api/v1/products", {
         method: "POST",
-        body: toLaravelProductPayload(body),
+        body: payload,
       }),
     );
   } catch (error) {
