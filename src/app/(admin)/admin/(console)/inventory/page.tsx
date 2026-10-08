@@ -8,22 +8,12 @@ import { StatusBadge } from "@/features/admin/components/status-badge";
 import { formatAdminDate } from "@/features/admin/labels";
 import { adminRequest, adminList } from "@/features/admin/services/admin-client";
 import { cn } from "@/lib/utils/cn";
-import { INVENTORY_REASONS, type InventoryLog, type InventoryReason } from "@/types/admin";
-
-type InventoryRow = {
-  productId: string;
-  productName: string;
-  variantId: string;
-  sku: string;
-  size: string | null;
-  color: string | null;
-  stock: number;
-  reserved: number;
-  sold: number;
-  threshold: number;
-  active: boolean;
-  level: string;
-};
+import {
+  INVENTORY_REASONS,
+  type InventoryLog,
+  type InventoryReason,
+  type InventoryVariant,
+} from "@/types/admin";
 
 const REASON_LABEL: Record<InventoryReason, string> = {
   reception: "Réception",
@@ -35,19 +25,31 @@ const REASON_LABEL: Record<InventoryReason, string> = {
   sale: "Vente",
 };
 
-function variantLabel(row: InventoryRow) {
-  const details = [row.size, row.color].filter(Boolean).join(" / ");
-  return details
-    ? `${row.productName} · ${details} · ${row.sku}`
-    : `${row.productName} · ${row.sku}`;
+/*
+ * Le libelle d'une declinaison vient de la ressource : `name` est le texte
+ * affiche au client et au guichet (« Taille M - Noir »), et `sku` l'identifie au
+ * comptoir. Les deux suffisent, et rien n'est recompose ici a partir de `size`
+ * et `color` — ces champs servent a agreger, pas a nommer.
+ */
+function variantLabel(row: InventoryVariant) {
+  return `${row.name} · ${row.sku}`;
+}
+
+async function fetchStock() {
+  return adminList<InventoryVariant>("/api/admin/inventory");
+}
+
+async function fetchHistory() {
+  return adminList<InventoryLog>("/api/admin/inventory/adjustments");
 }
 
 export default function AdminInventoryPage() {
-  const [rows, setRows] = useState<InventoryRow[] | null>(null);
+  const [rows, setRows] = useState<InventoryVariant[] | null>(null);
   const [logs, setLogs] = useState<InventoryLog[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [variantId, setVariantId] = useState("");
+  const [variantUuid, setVariantUuid] = useState("");
   const [variantSearch, setVariantSearch] = useState("");
   const [variantOpen, setVariantOpen] = useState(false);
   const [delta, setDelta] = useState("10");
@@ -56,16 +58,21 @@ export default function AdminInventoryPage() {
   const [saving, setSaving] = useState(false);
   const variantBoxRef = useRef<HTMLDivElement>(null);
 
+  /*
+   * Les deux lectures sont independantes, et le restent.
+   *
+   * Le journal demande la permission `audit`, reservee a l'administrateur, alors
+   * que la liste du stock est ouverte au guichetier. Les charger d'un seul bloc
+   * ferait echouer la page entiere pour un role qui a justement le droit de voir
+   * le stock : il verrait un refus la ou il n'a besoin que du comptoir.
+   */
   useEffect(() => {
-    void Promise.all([
-      adminList<InventoryRow>("/api/admin/inventory"),
-      adminList<InventoryLog>("/api/admin/inventory?history=1"),
-    ])
-      .then(([inventory, history]) => {
-        setRows(inventory);
-        setLogs(history);
-      })
+    void fetchStock()
+      .then(setRows)
       .catch((loadError: Error) => setError(loadError.message));
+    void fetchHistory()
+      .then(setLogs)
+      .catch((loadError: Error) => setHistoryError(loadError.message));
   }, []);
 
   useEffect(() => {
@@ -79,18 +86,20 @@ export default function AdminInventoryPage() {
   }, []);
 
   async function load() {
-    const [inventory, history] = await Promise.all([
-      adminList<InventoryRow>("/api/admin/inventory"),
-      adminList<InventoryLog>("/api/admin/inventory?history=1"),
-    ]);
+    const inventory = await fetchStock();
     setRows(inventory);
-    setLogs(history);
+    try {
+      setLogs(await fetchHistory());
+      setHistoryError(null);
+    } catch (loadError) {
+      setHistoryError(loadError instanceof Error ? loadError.message : "Historique indisponible.");
+    }
     return inventory;
   }
 
   const selectedVariant = useMemo(
-    () => (rows ?? []).find((row) => row.variantId === variantId) ?? null,
-    [rows, variantId],
+    () => (rows ?? []).find((row) => row.uuid === variantUuid) ?? null,
+    [rows, variantUuid],
   );
 
   const variantMatches = useMemo(() => {
@@ -101,7 +110,7 @@ export default function AdminInventoryPage() {
     }
     return list
       .filter((row) =>
-        [row.productName, row.sku, row.color ?? "", row.size ?? "", row.variantId]
+        [row.name, row.sku, row.color ?? "", row.size ?? "", row.uuid]
           .join(" ")
           .toLowerCase()
           .includes(q),
@@ -116,38 +125,38 @@ export default function AdminInventoryPage() {
       return list;
     }
     return list.filter((row) =>
-      [row.productName, row.sku, row.color ?? "", row.size ?? ""].join(" ").toLowerCase().includes(q),
+      [row.name, row.sku, row.color ?? "", row.size ?? ""].join(" ").toLowerCase().includes(q),
     );
   }, [rows, query]);
 
-  function selectVariant(row: InventoryRow) {
-    setVariantId(row.variantId);
+  function selectVariant(row: InventoryVariant) {
+    setVariantUuid(row.uuid);
     setVariantSearch(variantLabel(row));
     setVariantOpen(false);
   }
 
   function clearVariant() {
-    setVariantId("");
+    setVariantUuid("");
     setVariantSearch("");
     setVariantOpen(true);
   }
 
   async function adjust(event: FormEvent) {
     event.preventDefault();
-    if (!variantId) {
+    if (!variantUuid) {
       setError("Sélectionnez une variante.");
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      await adminRequest(`/api/admin/inventory/${variantId}/adjust`, {
+      await adminRequest(`/api/admin/inventory/${variantUuid}/adjust`, {
         method: "POST",
         body: { delta: Number(delta), reason, note },
       });
       setNote("");
       const inventory = await load();
-      const refreshed = inventory.find((row) => row.variantId === variantId);
+      const refreshed = inventory.find((row) => row.uuid === variantUuid);
       if (refreshed) {
         setVariantSearch(variantLabel(refreshed));
       }
@@ -183,7 +192,7 @@ export default function AdminInventoryPage() {
               value={variantSearch}
               onChange={(event) => {
                 setVariantSearch(event.target.value);
-                setVariantId("");
+                setVariantUuid("");
                 setVariantOpen(true);
               }}
               onFocus={() => setVariantOpen(true)}
@@ -197,7 +206,7 @@ export default function AdminInventoryPage() {
                 }
               }}
             />
-            {variantId || variantSearch ? (
+            {variantUuid || variantSearch ? (
               <button
                 type="button"
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-extrabold uppercase text-tdev-muted hover:text-tdev-anthracite"
@@ -219,11 +228,10 @@ export default function AdminInventoryPage() {
                 </li>
               ) : (
                 variantMatches.map((row) => {
-                  const selected = row.variantId === variantId;
+                  const selected = row.uuid === variantUuid;
                   return (
-                    <li key={row.variantId} role="option" aria-selected={selected}>
+                    <li key={row.uuid} role="option" aria-selected={selected}>
                       <button
-                        key={row.variantId}
                         type="button"
                         className={cn(
                           "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left font-normal transition-colors",
@@ -232,7 +240,7 @@ export default function AdminInventoryPage() {
                         onClick={() => selectVariant(row)}
                       >
                         <span className="text-sm font-medium text-tdev-anthracite">
-                          {row.productName}
+                          {row.name}
                         </span>
                         <span className="text-xs text-tdev-muted">
                           {[row.size, row.color].filter(Boolean).join(" / ") || "Sans option"}
@@ -309,33 +317,25 @@ export default function AdminInventoryPage() {
       />
       {rows && filtered.length > 0 ? (
         <div className="overflow-x-auto border border-tdev-anthracite bg-tdev-white">
-          <table className="min-w-[860px] w-full text-left text-sm">
+          <table className="min-w-[720px] w-full text-left text-sm">
             <thead className="bg-tdev-surface text-[11px] font-extrabold uppercase tracking-[0.12em]">
               <tr>
-                <th className="p-3">Produit</th>
                 <th className="p-3">Variante</th>
                 <th className="p-3">SKU</th>
                 <th className="p-3">Dispo</th>
-                <th className="p-3">Réservé</th>
-                <th className="p-3">Vendu</th>
                 <th className="p-3">Seuil</th>
                 <th className="p-3">Statut</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((row) => (
-                <tr key={row.variantId} className="border-t border-tdev-border">
-                  <td className="p-3 font-medium">{row.productName}</td>
-                  <td className="p-3">
-                    {[row.size, row.color].filter(Boolean).join(" / ") || "—"}
-                  </td>
+                <tr key={row.uuid} className="border-t border-tdev-border">
+                  <td className="p-3 font-medium">{row.name}</td>
                   <td className="p-3">{row.sku}</td>
                   <td className="p-3">{row.stock}</td>
-                  <td className="p-3">{row.reserved}</td>
-                  <td className="p-3">{row.sold}</td>
-                  <td className="p-3">{row.threshold}</td>
+                  <td className="p-3">{row.lowStockThreshold}</td>
                   <td className="p-3">
-                    <StatusBadge value={row.level} />
+                    <StatusBadge value={row.stockLevel} label={row.stockLevelLabel} />
                   </td>
                 </tr>
               ))}
@@ -345,7 +345,9 @@ export default function AdminInventoryPage() {
       ) : null}
       <section className="mt-8">
         <h2 className="font-headline text-lg font-extrabold uppercase">Historique</h2>
-        {logs.length === 0 ? (
+        {historyError ? (
+          <p className="mt-3 text-sm text-tdev-muted">{historyError}</p>
+        ) : logs.length === 0 ? (
           <p className="mt-3 text-sm text-tdev-muted">Aucun mouvement pour l&apos;instant.</p>
         ) : (
           <div className="mt-3 overflow-x-auto border border-tdev-anthracite bg-tdev-white">
@@ -364,14 +366,14 @@ export default function AdminInventoryPage() {
               </thead>
               <tbody>
                 {logs.slice(0, 40).map((log) => (
-                  <tr key={log.id} className="border-t border-tdev-border">
+                  <tr key={log.uuid} className="border-t border-tdev-border">
                     <td className="p-3 text-tdev-muted">{formatAdminDate(log.createdAt, 16).replace("T", " ")}</td>
                     <td className="p-3">{log.productName}</td>
                     <td className="p-3">{log.sku}</td>
                     <td className="p-3">{log.previousStock}</td>
                     <td className="p-3">{log.delta > 0 ? `+${log.delta}` : log.delta}</td>
                     <td className="p-3">{log.nextStock}</td>
-                    <td className="p-3">{REASON_LABEL[log.reason]}</td>
+                    <td className="p-3">{log.reasonLabel || REASON_LABEL[log.reason]}</td>
                     <td className="p-3">{log.userEmail}</td>
                   </tr>
                 ))}

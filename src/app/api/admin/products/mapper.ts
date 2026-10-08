@@ -1,8 +1,10 @@
 type LaravelVariant = Record<string, unknown>;
 type LaravelProduct = Record<string, unknown>;
 
-function asNumber(value: unknown, fallback = 0) {
-  return typeof value === "number" ? value : Number(value ?? fallback);
+function asNumber(value: unknown, fallback = 0): number {
+  if (typeof value === "number") return isNaN(value) ? fallback : value;
+  const n = Number(value ?? fallback);
+  return isNaN(n) ? fallback : n;
 }
 
 export function mapLaravelProduct(product: LaravelProduct) {
@@ -49,6 +51,8 @@ export function mapLaravelProduct(product: LaravelProduct) {
         soldQuantity: asNumber(item.soldQuantity ?? item.sold_quantity),
         lowStockThreshold: asNumber(item.lowStockThreshold ?? item.low_stock_threshold, 5),
         active: item.status === undefined || item.status === 1 || item.status === "1",
+        imageUrl: (item.imageUrl as string | null) ?? (item.image_url as string | null) ?? null,
+        colorHex: (item.colorHex as string | null) ?? (item.color_hex as string | null) ?? null,
       };
     }),
   };

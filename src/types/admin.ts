@@ -134,20 +134,60 @@ export type AdminProduct = Omit<Product, "variants" | "category"> & {
   variants: AdminVariant[];
 };
 
-export type InventoryLog = {
-  id: string;
-  createdAt: string;
-  productId: string;
-  productName: string;
-  variantId: string;
+/**
+ * Une declinaison de stock, telle que `VariantResource` la renvoie
+ * (`GET /admin/inventory`).
+ *
+ * Les noms sont ceux de la ressource, pas ceux d'un ecran : `uuid` et non
+ * `variantId` (les identifiants publics sont des UUID), `lowStockThreshold` et
+ * non `threshold`, `stockLevel` / `stockLevelLabel` et non `level`. Inventer un
+ * second vocabulaire oblige a maintenir une table de correspondance, et c'est
+ * exactement ce decalage qui faisait afficher des colonnes vides.
+ *
+ * Il n'y a ni `reserved` ni `sold` : la ressource ne les expose pas, et l'ecran
+ * ne doit donc pas offrir de colonnes qu'aucune donnee ne remplit.
+ */
+export type InventoryVariant = {
+  uuid: string;
   sku: string;
+  name: string;
+  size: string | null;
+  color: string | null;
+  imageUrl: string | null;
+  colorHex: string | null;
+  price: number;
+  stock: number;
+  lowStockThreshold: number;
+  status: number;
+  isAvailable: boolean;
+  stockLevel: InventoryLevel;
+  stockLevelLabel: string;
+};
+
+/**
+ * Un mouvement de stock, tel que `InventoryAdjustmentResource` le renvoie
+ * (`GET /admin/inventory/adjustments`).
+ *
+ * `reasonLabel` vient de la ressource et `direction` en est deduite : le signe
+ * d'un nombre ne se lit pas dans un tableau, donc « entree / sortie » est
+ * exposee plutot que recalculee ici.
+ */
+export type InventoryLog = {
+  uuid: string;
+  sku: string;
+  productName: string;
+  productId: string | null;
+  variantId: string | null;
   previousStock: number;
   delta: number;
   nextStock: number;
+  direction: "in" | "out";
   reason: InventoryReason;
+  reasonLabel: string;
   note: string;
-  userId: string;
+  userId: string | null;
   userEmail: string;
+  createdAt: string;
 };
 
 /**

@@ -131,7 +131,7 @@ export function AdminShell({ children }: AdminShellProps) {
             {menuOpen ? "Fermer" : "Menu"}
           </button>
           <Link href="/admin/dashboard" className="min-w-0 shrink">
-            <BrandMark className="origin-left scale-90 sm:scale-100 [&_[data-brand-wordmark]]:hidden sm:[&_[data-brand-wordmark]]:inline" />
+            <BrandMark className="origin-left scale-90 sm:scale-100" />
           </Link>
           <span className="hidden font-headline text-xs font-extrabold uppercase tracking-[0.16em] text-tdev-muted xl:inline">
             Admin Shop
