@@ -11,6 +11,12 @@ function validUuid(value: unknown) {
 }
 
 function toLaravelProductPayload(body: Record<string, unknown>) {
+  const status =
+    body.status === "published" || body.status === "active"
+      ? 1
+      : body.status === "draft" || body.status === "archived" || body.status === "inactive"
+        ? 0
+        : body.status ?? 0;
   const variants = Array.isArray(body.variants)
     ? body.variants.map((variant) => {
         const item = variant as Record<string, unknown>;
@@ -32,7 +38,7 @@ function toLaravelProductPayload(body: Record<string, unknown>) {
   return {
     ...body,
     category_id: Number(body.category_id ?? body.category),
-    status: body.status === "published" ? 1 : body.status === "active" ? 1 : body.status ?? 0,
+    status,
     variants,
   };
 }

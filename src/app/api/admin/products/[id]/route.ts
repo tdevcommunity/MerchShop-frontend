@@ -13,10 +13,16 @@ function validUuid(value: unknown) {
 }
 
 function toLaravelProductPayload(body: Record<string, unknown>) {
+  const status =
+    body.status === "published" || body.status === "active"
+      ? 1
+      : body.status === "draft" || body.status === "archived" || body.status === "inactive"
+        ? 0
+        : body.status;
   return {
     ...body,
     category_id: body.category_id == null ? undefined : Number(body.category_id ?? body.category),
-    status: body.status === "published" ? 1 : body.status === "active" ? 1 : body.status,
+    status,
     variants: Array.isArray(body.variants)
       ? body.variants.map((variant) => {
           const item = variant as Record<string, unknown>;
@@ -28,7 +34,12 @@ function toLaravelProductPayload(body: Record<string, unknown>) {
             color: item.color ?? null,
             price: item.price ?? item.unitPrice,
             stock: item.stock ?? item.stockQuantity,
-            status: item.status === "published" ? 1 : item.status ?? 1,
+            status:
+              item.status === "published" || item.status === "active"
+                ? 1
+                : item.status === "draft" || item.status === "archived" || item.status === "inactive"
+                  ? 0
+                  : item.status ?? 1,
           };
         })
       : undefined,
