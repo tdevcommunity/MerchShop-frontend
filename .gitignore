@@ -59,3 +59,5 @@ CLAUDE.md
 # Store local du BFF admin (dev / test uniquement)
 /.data/
 
+.opencode
+
