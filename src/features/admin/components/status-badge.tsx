@@ -32,9 +32,18 @@ const TONES: Record<string, string> = {
 
 type StatusBadgeProps = {
   value: unknown;
+  /**
+   * Le libelle a afficher quand l'API le fournit deja.
+   *
+   * `VariantResource` expose `stockLevelLabel` a cote de `stockLevel` (« En
+   * rupture », « Desactivee ») : c'est le vocabulaire du serveur, et il n'y a
+   * pas de raison de le retraduire ici. `value` reste la valeur technique, qui
+   * choisit la couleur.
+   */
+  label?: string;
 };
 
-export function StatusBadge({ value }: StatusBadgeProps) {
+export function StatusBadge({ value, label }: StatusBadgeProps) {
   return (
     <span
       className={cn(
@@ -44,7 +53,7 @@ export function StatusBadge({ value }: StatusBadgeProps) {
           : "bg-[#f0f0ee] text-tdev-anthracite",
       )}
     >
-      {statusLabel(value)}
+      {label ?? statusLabel(value)}
     </span>
   );
 }
