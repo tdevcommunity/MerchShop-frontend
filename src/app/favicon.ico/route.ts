@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import wordmark from "@/publics/tdev-wordmark-BAcPmZ98.png";
+import wordmarkPink from "@/publics/tdev-wordmark-pink.png";
 
 export function GET(request: Request) {
-  return NextResponse.redirect(new URL(wordmark.src, request.url), 308);
+  return NextResponse.redirect(new URL(wordmarkPink.src, request.url), 308);
 }

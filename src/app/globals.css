@@ -38,6 +38,20 @@
   --breakpoint-xl: 80rem;
 }
 
+/*
+ * Filtre rose du logo TDEV : invert(100%) fait passer le mark vert (#08bf62)
+ * a #f7409d. Les variables --tw-* sont celles utilisees par les utilitaires
+ * filtre de Tailwind ; les fallbacks vides empechent la declaration filter
+ * de devenir invalide quand aucune autre utilisation de filtre n'est definie.
+ */
+.tdev-logo-pink {
+  --tw-invert: invert(100%);
+  filter:
+    var(--tw-blur, ) var(--tw-brightness, ) var(--tw-contrast, ) var(--tw-grayscale, )
+    var(--tw-hue-rotate, ) var(--tw-invert) var(--tw-saturate, ) var(--tw-sepia, )
+    var(--tw-drop-shadow, );
+}
+
 html {
   background: var(--color-tdev-white);
 }

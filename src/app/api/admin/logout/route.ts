@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revokeAdminAccess } from "@/server/admin-access";
 import { laravelLogout } from "@/server/laravel";
 
 /**
@@ -24,6 +25,10 @@ export async function POST(request: Request) {
     for (const cookie of setCookies) {
       response.headers.append("Set-Cookie", cookie);
     }
+
+    // Le middleware s'appuie sur ce marqueur pour fermer `/admin/**` : le
+    // laisser en place apres une deconnexion reussie rouvrirait la porte.
+    revokeAdminAccess(response);
 
     return response;
   } catch {

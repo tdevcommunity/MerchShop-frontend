@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Script from "next/script";
 import { createMetadata } from "@/lib/seo/create-metadata";
-import wordmark from "@/publics/tdev-wordmark-BAcPmZ98.png";
+import wordmarkPink from "@/publics/tdev-wordmark-pink.png";
 import "./globals.css";
 
 export const metadata: Metadata = {
   ...createMetadata(),
   icons: {
-    icon: wordmark.src,
+    icon: wordmarkPink.src,
   },
 };
 
