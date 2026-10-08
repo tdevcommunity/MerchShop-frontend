@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, laravelErrorResponse } from "@/server/admin-session";
 import { laravelList } from "@/server/laravel";
+import { mapLaravelOrder } from "./mapper";
 
 export async function GET(request: Request) {
   const auth = await requireAdmin(request);
@@ -17,8 +18,17 @@ export async function GET(request: Request) {
         search[key] = value;
       }
     }
-    const result = await laravelList(request, "/api/v1/admin/orders", search);
-    return NextResponse.json(result);
+    const result = await laravelList<Record<string, unknown>>(
+      request,
+      "/api/v1/admin/orders",
+      search,
+    );
+    return NextResponse.json({
+      items: result.data.map(mapLaravelOrder),
+      total: result.meta.total,
+      page: result.meta.currentPage,
+      pageSize: result.meta.perPage || 20,
+    });
   } catch (error) {
     return laravelErrorResponse(error);
   }

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
+import { formatAdminDate } from "@/features/admin/labels";
 import { adminRequest, adminList } from "@/features/admin/services/admin-client";
 import type { AdminPickup } from "@/types/admin";
 
@@ -106,7 +107,7 @@ export default function AdminPickupsPage() {
                     <StatusBadge value={order.status} />
                   </td>
                   <td className="p-3">{qr?.status ?? "—"}</td>
-                  <td className="p-3 text-tdev-muted">{order.createdAt.slice(0, 10)}</td>
+                  <td className="p-3 text-tdev-muted">{formatAdminDate(order.createdAt, 10)}</td>
                   <td className="p-3">{order.pickupAgentEmail ?? "—"}</td>
                   <td className="p-3">
                     {order.status === "picked_up" || order.status === "completed" ? (

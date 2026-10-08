@@ -6,7 +6,8 @@ import { AdminAction } from "@/features/admin/components/admin-action";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { adminRequest } from "@/features/admin/services/admin-client";
-import type { AdminUserPublic } from "@/types/admin";
+import type { AdminInviteResult, AdminUserCreated, AdminUserPublic } from "@/types/admin";
+import { AccessCredentials } from "@/features/admin/components/access-credentials";
 
 export default function AdminUserDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -20,15 +21,21 @@ export default function AdminUserDetailPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  /*
+   * Le mot de passe a transmettre une fois, exactement comme après une
+   * invitation : la reponse est le seul endroit ou il existe en clair, et
+   * une boîte `alert()` ne dit ni pour qui il est ni qu'il ne reviendra pas.
+   */
+  const [access, setAccess] = useState<AdminInviteResult | null>(null);
 
   useEffect(() => {
     void adminRequest<AdminUserPublic>(`/api/admin/users/${id}`)
       .then((loaded) => {
         setUser(loaded);
-        setName(loaded.name);
+        setName(loaded.fullName);
         setEmail(loaded.email);
         setRole(loaded.role);
-        setActive(loaded.active);
+        setActive(loaded.status === 1);
       })
       .catch((loadError: Error) => setError(loadError.message));
   }, [id]);
@@ -41,7 +48,13 @@ export default function AdminUserDetailPage() {
     try {
       const updated = await adminRequest<AdminUserPublic>(`/api/admin/users/${id}`, {
         method: "PATCH",
-        body: { name, email, role, active },
+        /*
+         * Le nom part en un champ : l'API le coupe elle-meme, et `status`
+         * part en entier, la nomenclature qu'elle attend. L'adresse email,
+         * affichee en lecture seule, ne part pas — un patch n'envoie que ce
+         * qu'il change.
+         */
+        body: { name, role, status: active ? 1 : 0 },
       });
       setUser(updated);
       setSaveSuccess(true);
@@ -56,8 +69,14 @@ export default function AdminUserDetailPage() {
 
   async function resetPassword() {
     try {
-      await adminRequest(`/api/admin/users/${id}/reset-password`, { method: "POST" });
-      alert("Mot de passe réinitialisé. Le nouvel accès a été envoyé par email.");
+      const reset = await adminRequest<AdminUserCreated>(
+        `/api/admin/users/${id}/reset-password`,
+        { method: "POST" },
+      );
+      setAccess({
+        user: reset.data,
+        temporaryPassword: reset.temporaryPassword,
+      });
     } catch (resetError) {
       alert(resetError instanceof Error ? resetError.message : "Réinitialisation impossible.");
     }
@@ -66,7 +85,7 @@ export default function AdminUserDetailPage() {
   return (
     <div>
       <PageHeader
-        title={user?.name ?? "Utilisateur"}
+        title={user?.fullName ?? "Utilisateur"}
         description="Modifier les informations du compte."
         actions={
           <AdminAction tone="default" onClick={() => router.back()}>
@@ -76,6 +95,10 @@ export default function AdminUserDetailPage() {
       />
 
       <AdminState loading={!user && !error} error={error} />
+
+      {access ? (
+        <AccessCredentials access={access} className="mb-6 max-w-lg" />
+      ) : null}
 
       {user ? (
         <form

@@ -36,11 +36,11 @@ export function QuantityStepper({
   }, [value]);
 
   return (
-    <div className="flex items-center border border-tdev-anthracite">
+    <div className="flex w-fit max-w-full shrink-0 items-center border border-tdev-anthracite">
       <Button
         variant="ghost"
         size="sm"
-        className="min-h-11 min-w-11 rounded-none"
+        className="min-h-11 min-w-11 shrink-0 rounded-none"
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
         aria-label={`Diminuer ${label}`}
@@ -56,14 +56,14 @@ export function QuantityStepper({
         aria-label={label}
         onChange={(event) => onChange(Number(event.target.value))}
         className={cn(
-          "h-11 w-12 border-x border-tdev-anthracite bg-tdev-white text-center tabular-nums",
+          "h-11 w-12 shrink-0 border-x border-tdev-anthracite bg-tdev-white text-center tabular-nums",
           pulse && "motion-pop",
         )}
       />
       <Button
         variant="ghost"
         size="sm"
-        className="min-h-11 min-w-11 rounded-none"
+        className="min-h-11 min-w-11 shrink-0 rounded-none"
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
         aria-label={`Augmenter ${label}`}

@@ -7,7 +7,7 @@ import { AdminAction } from "@/features/admin/components/admin-action";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
-import { adminRequest, adminList } from "@/features/admin/services/admin-client";
+import { adminList, adminRequest } from "@/features/admin/services/admin-client";
 import type { AdminCategory } from "@/types/admin";
 
 export default function AdminCategoriesPage() {

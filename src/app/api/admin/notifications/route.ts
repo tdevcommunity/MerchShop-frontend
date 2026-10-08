@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, laravelErrorResponse } from "@/server/admin-session";
-import { laravelList } from "@/server/laravel";
+import { laravelFetch } from "@/server/laravel";
 
 export async function GET(request: Request) {
   const auth = await requireAdmin(request);
@@ -9,13 +9,19 @@ export async function GET(request: Request) {
   }
 
   try {
-    const sp = new URL(request.url).searchParams;
-    const search: Record<string, string> = {};
-    for (const [key, value] of sp.entries()) {
-      search[key] = value;
-    }
-    const result = await laravelList(request, "/api/v1/admin/notifications", search);
-    return NextResponse.json(result);
+    const notifications = await laravelFetch<Array<{
+      id: string;
+      tone: "warning" | "info";
+      message: string;
+      createdAt: string;
+    }>>(request, "/api/v1/admin/notifications");
+
+    return NextResponse.json({
+      data: notifications.map((notification) => ({
+        ...notification,
+        read: false,
+      })),
+    });
   } catch (error) {
     return laravelErrorResponse(error);
   }

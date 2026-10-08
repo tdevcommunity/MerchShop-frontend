@@ -1,47 +1,25 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, laravelErrorResponse } from "@/server/admin-session";
 import { laravelFetch } from "@/server/laravel";
-import type { DashboardSnapshot } from "@/types/admin";
 
-/**
- * Reponse de GET /api/v1/admin/dashboard (DashboardService::summary).
- *
- * L'API renvoie des compteurs groupes par domaine, alors que l'ecran attend
- * un instantane a plat (DashboardSnapshot). Tant que les deux contrats ne sont
- * pas alignes, la conversion se fait ici : l'ecran ne doit jamais recevoir un
- * champ absent, sinon il plante sur `salesByDay.map`.
- */
-type LaravelDashboard = {
-  orders?: { pendingPayment?: number; paid?: number; pickedUp?: number; cancelled?: number };
-  revenue?: number;
-  inventory?: { outOfStock?: number; lowStock?: number; disabled?: number };
-  pickup?: { ready?: number; awaitingPreparation?: number };
-};
-
-function toSnapshot(api: LaravelDashboard, from: string, to: string): DashboardSnapshot {
-  const orders = api.orders ?? {};
-  const pendingOrders = orders.pendingPayment ?? 0;
-  const paidOrders = orders.paid ?? 0;
-  const pickedUp = orders.pickedUp ?? 0;
-
-  return {
-    from,
-    to,
-    revenue: api.revenue ?? 0,
-    orders: pendingOrders + paidOrders + pickedUp + (orders.cancelled ?? 0),
-    paidOrders,
-    pendingOrders,
-    readyForPickup: api.pickup?.ready ?? 0,
-    pickedUp,
-    // Non fournis par l'API pour l'instant : l'ecran affiche des zeros et des
-    // listes vides plutot que de planter.
-    activeProducts: 0,
-    lowStockProducts: api.inventory?.lowStock ?? 0,
-    salesByDay: [],
-    topProducts: [],
-    lowStock: [],
+type BackendDashboard = {
+  orders?: {
+    pendingPayment?: number;
+    paid?: number;
+    pickedUp?: number;
+    cancelled?: number;
   };
-}
+  revenue?: number;
+  inventory?: {
+    outOfStock?: number;
+    lowStock?: number;
+    disabled?: number;
+  };
+  pickup?: {
+    ready?: number;
+    awaitingPreparation?: number;
+  };
+};
 
 export async function GET(request: Request) {
   const auth = await requireAdmin(request);
@@ -52,12 +30,42 @@ export async function GET(request: Request) {
   try {
     const sp = new URL(request.url).searchParams;
     const search: Record<string, string> = {};
-    const from = sp.get("from") ?? "";
-    const to = sp.get("to") ?? "";
-    if (from) search["from"] = from;
-    if (to) search["to"] = to;
-    const data = await laravelFetch<LaravelDashboard>(request, "/api/v1/admin/dashboard", { search });
-    return NextResponse.json(toSnapshot(data ?? {}, from, to));
+    const from = sp.get("from");
+    const to = sp.get("to");
+    if (from && to) {
+      const start = new Date(`${from}T00:00:00Z`).getTime();
+      const end = new Date(`${to}T00:00:00Z`).getTime();
+      const days = Number.isFinite(start) && Number.isFinite(end)
+        ? Math.max(1, Math.floor((end - start) / 86_400_000) + 1)
+        : 1;
+      search.failures_days = String(days);
+    }
+
+    const backend = await laravelFetch<BackendDashboard>(
+      request,
+      "/api/v1/admin/dashboard",
+      { search },
+    );
+    const orders = backend.orders ?? {};
+    const inventory = backend.inventory ?? {};
+    const pickup = backend.pickup ?? {};
+
+    return NextResponse.json({
+      from: from ?? "",
+      to: to ?? "",
+      revenue: backend.revenue ?? 0,
+      orders: (orders.pendingPayment ?? 0) + (orders.paid ?? 0) +
+        (orders.pickedUp ?? 0) + (orders.cancelled ?? 0),
+      paidOrders: orders.paid ?? 0,
+      pendingOrders: orders.pendingPayment ?? 0,
+      readyForPickup: pickup.ready ?? 0,
+      pickedUp: orders.pickedUp ?? 0,
+      activeProducts: 0,
+      lowStockProducts: inventory.lowStock ?? 0,
+      salesByDay: [],
+      topProducts: [],
+      lowStock: [],
+    });
   } catch (error) {
     return laravelErrorResponse(error);
   }

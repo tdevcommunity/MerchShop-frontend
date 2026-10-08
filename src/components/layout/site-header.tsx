@@ -58,7 +58,7 @@ export function SiteHeader() {
                 key={item.label}
                 href={item.href}
                 className={cn(
-                  "min-h-11 text-sm transition-colors duration-150",
+                  "flex min-h-11 items-center text-sm transition-colors duration-150",
                   isBoutique
                     ? "font-semibold text-tdev-anthracite"
                     : "font-medium text-tdev-muted hover:text-tdev-anthracite",

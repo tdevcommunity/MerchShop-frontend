@@ -7,6 +7,7 @@ import { AdminAction, AdminActionLink } from "@/features/admin/components/admin-
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
+import { formatAdminDate } from "@/features/admin/labels";
 import { adminRequest, adminList } from "@/features/admin/services/admin-client";
 import { formatMoney } from "@/lib/utils/format-money";
 import type { AdminProduct } from "@/types/admin";
@@ -34,7 +35,7 @@ export default function AdminProductsPage() {
       return list;
     }
     return list.filter((product) =>
-      [product.name, product.slug, product.category, ...product.variants.map((variant) => variant.sku)]
+      [product.name, product.slug, product.category, product.categoryLabel ?? "", ...product.variants.map((variant) => variant.sku)]
         .join(" ")
         .toLowerCase()
         .includes(q),
@@ -107,6 +108,15 @@ export default function AdminProductsPage() {
             </thead>
             <tbody>
               {rows.map((product) => {
+                const rawCategory: unknown = product.category;
+                const category =
+                  typeof rawCategory === "string"
+                    ? rawCategory
+                    : rawCategory &&
+                        typeof rawCategory === "object" &&
+                        "name" in rawCategory
+                      ? String((rawCategory as { name: unknown }).name)
+                      : "";
                 const stock = product.variants.reduce((sum, variant) => sum + variant.stockQuantity, 0);
                 const price = Math.min(...product.variants.map((variant) => variant.unitPrice));
                 return (
@@ -120,14 +130,14 @@ export default function AdminProductsPage() {
                       )}
                     </td>
                     <td className="p-3 font-medium">{product.name}</td>
-                    <td className="p-3">{product.category}</td>
+                    <td className="p-3">{category}</td>
                     <td className="p-3">{formatMoney(price)}</td>
                     <td className="p-3">{product.variants.length}</td>
                     <td className="p-3">{stock}</td>
                     <td className="p-3">
                       <StatusBadge value={product.status} />
                     </td>
-                    <td className="p-3 text-tdev-muted">{product.createdAt.slice(0, 10)}</td>
+                    <td className="p-3 text-tdev-muted">{formatAdminDate(product.createdAt, 10)}</td>
                     <td className="p-3">
                       <div className="flex flex-wrap gap-1.5">
                         <AdminActionLink href={`/admin/products/${product.id}`} tone="brand">

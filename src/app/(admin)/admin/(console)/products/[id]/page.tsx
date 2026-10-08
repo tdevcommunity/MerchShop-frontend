@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { ProductForm } from "@/features/admin/components/product-form";
-import { adminRequest, adminList } from "@/features/admin/services/admin-client";
+import { adminList, adminRequest } from "@/features/admin/services/admin-client";
 import type { AdminCategory, AdminProduct } from "@/types/admin";
 
 export default function AdminProductDetailPage() {

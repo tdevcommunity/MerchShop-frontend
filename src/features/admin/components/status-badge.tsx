@@ -31,7 +31,7 @@ const TONES: Record<string, string> = {
 };
 
 type StatusBadgeProps = {
-  value: string;
+  value: unknown;
 };
 
 export function StatusBadge({ value }: StatusBadgeProps) {
@@ -39,7 +39,9 @@ export function StatusBadge({ value }: StatusBadgeProps) {
     <span
       className={cn(
         "inline-flex px-2 py-0.5 text-[11px] font-extrabold uppercase",
-        TONES[value] ?? "bg-[#f0f0ee] text-tdev-anthracite",
+        typeof value === "string"
+          ? TONES[value] ?? "bg-[#f0f0ee] text-tdev-anthracite"
+          : "bg-[#f0f0ee] text-tdev-anthracite",
       )}
     >
       {statusLabel(value)}

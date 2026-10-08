@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminState } from "@/features/admin/components/admin-state";
+import { formatAdminDate } from "@/features/admin/labels";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { adminRequest } from "@/features/admin/services/admin-client";
 import type { AdminNotification } from "@/types/admin";
@@ -54,7 +55,7 @@ export default function AdminNotificationsPage() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm">{note.message}</p>
-                <p className="mt-1 text-xs text-tdev-muted">{note.createdAt.slice(0, 19)}</p>
+                <p className="mt-1 text-xs text-tdev-muted">{formatAdminDate(note.createdAt)}</p>
               </div>
               {!note.read ? (
                 <span className="inline-block size-2 shrink-0 rounded-full bg-tdev-orange" />

@@ -72,6 +72,23 @@ function uniqueColors(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.map((value) => value?.trim()).filter(Boolean))] as string[];
 }
 
+function slugify(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function makeSku(name: string, size: string | null, color: string, index: number): string {
+  const parts = [name, size, color, String(index + 1)]
+    .filter(Boolean)
+    .map((part) => slugify(String(part)).replace(/-/g, "").toUpperCase());
+  return parts.join("-").slice(0, 100) || `PRODUCT-${index + 1}`;
+}
+
 function initialColorImages(product?: AdminProduct): Record<string, string> {
   const map: Record<string, string> = {};
   for (const variant of product?.variants ?? []) {
@@ -100,19 +117,20 @@ function readAsDataUrl(file: File): Promise<string> {
 export function ProductForm({ categories, product }: ProductFormProps) {
   const router = useRouter();
   const [name, setName] = useState(product?.name ?? "");
-  const [slug, setSlug] = useState(product?.slug ?? "");
+  const slug = product?.slug ?? "";
   const [description, setDescription] = useState(product?.description ?? "");
   const [category, setCategory] = useState(
-    product?.category ?? categories[0]?.slug ?? "textile",
+    categories.find((item) => item.slug === product?.category)?.id ??
+      categories[0]?.id ??
+      "",
   );
   const [status, setStatus] = useState<ProductStatus>(product?.status ?? "draft");
   const [featured, setFeatured] = useState(product?.featured ?? false);
   const [images, setImages] = useState<string[]>(product?.images ?? []);
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [colorImages, setColorImages] = useState<Record<string, string>>(() =>
     initialColorImages(product),
   );
-  const [colorImageDraft, setColorImageDraft] = useState<Record<string, string>>({});
   const [variants, setVariants] = useState<VariantDraft[]>(
     product?.variants.map((variant) => ({
       id: variant.id,
@@ -147,17 +165,11 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     () => uniqueColors(variants.map((variant) => variant.color)),
     [variants],
   );
-
-  function addImage() {
-    if (!imageUrl.trim()) {
-      return;
-    }
-    setImages((current) => [...current, imageUrl.trim()]);
-    setImageUrl("");
-  }
+  const generatedSlug = slugify(name);
 
   async function onProductFile(file: File) {
     const dataUrl = await readAsDataUrl(file);
+    setImageFile(file);
     setImages((current) => [...current, dataUrl]);
   }
 
@@ -172,11 +184,6 @@ export function ProductForm({ categories, product }: ProductFormProps) {
 
   function clearColorImage(color: string) {
     setColorImages((current) => {
-      const next = { ...current };
-      delete next[color];
-      return next;
-    });
-    setColorImageDraft((current) => {
       const next = { ...current };
       delete next[color];
       return next;
@@ -219,26 +226,26 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     try {
       const payload = {
         name,
-        slug,
+        slug: generatedSlug,
         description,
         category,
         status,
         featured,
-        images,
+        images: images.filter((src) => /^https?:\/\//i.test(src)),
         variants: variants.map((variant, index) => {
           const sku =
             variant.sku.trim() ||
-            [slug || name, variant.size, variant.color, index + 1]
-              .filter(Boolean)
-              .join("-")
-              .toUpperCase();
+            makeSku(name || slug, variant.size, variant.color, index);
           const color = variant.color || null;
           return {
             ...variant,
             sku,
             color,
             colorHex: color && isPaletteColor(color) ? null : variant.colorHex || null,
-            imageUrl: color ? colorImages[color] || variant.imageUrl || null : null,
+            imageUrl:
+              color && /^https?:\/\//i.test(colorImages[color] || variant.imageUrl || "")
+                ? colorImages[color] || variant.imageUrl
+                : null,
           };
         }),
       };
@@ -266,15 +273,24 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             active: current?.active ?? true,
           };
         });
-        await adminRequest(`/api/admin/products/${product.id}`, {
-          method: "PATCH",
-          body: { ...payload, variants: nextVariants },
-        });
+        const body = { ...payload, variants: nextVariants };
+        if (imageFile) {
+          const form = new FormData();
+          form.append("payload", JSON.stringify(body));
+          form.append("image", imageFile, imageFile.name);
+          await adminRequest(`/api/admin/products/${product.id}`, { method: "PATCH", body: form });
+        } else {
+          await adminRequest(`/api/admin/products/${product.id}`, { method: "PATCH", body });
+        }
       } else {
-        await adminRequest("/api/admin/products", {
-          method: "POST",
-          body: payload,
-        });
+        if (imageFile) {
+          const form = new FormData();
+          form.append("payload", JSON.stringify(payload));
+          form.append("image", imageFile, imageFile.name);
+          await adminRequest("/api/admin/products", { method: "POST", body: form });
+        } else {
+          await adminRequest("/api/admin/products", { method: "POST", body: payload });
+        }
       }
       router.push("/admin/products");
       router.refresh();
@@ -295,7 +311,13 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         <h2 className="font-headline text-lg font-extrabold uppercase">Général</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Input name="name" label="Nom" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input name="slug" label="Slug" value={slug} onChange={(e) => setSlug(e.target.value)} />
+          <Input
+            name="slug"
+            label="Slug automatique"
+            value={generatedSlug}
+            readOnly
+            hint="Généré à partir du nom du produit."
+          />
         </div>
         <label className="mt-4 block text-sm font-medium">
           Description
@@ -314,7 +336,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               onChange={(event) => setCategory(event.target.value)}
             >
               {categories.filter((item) => item.active).map((item) => (
-                <option key={item.id} value={item.slug}>
+                <option key={item.id} value={item.id}>
                   {item.label}
                 </option>
               ))}
@@ -360,27 +382,14 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             </div>
           ))}
         </div>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="min-w-0 flex-1">
-            <Input
-              name="imageUrl"
-              label="URL image"
-              value={imageUrl}
-              onChange={(event) => setImageUrl(event.target.value)}
-            />
-          </div>
-          <Button type="button" className="w-full sm:w-auto" onClick={addImage}>
-            Ajouter URL
-          </Button>
-        </div>
         <ImageFilePicker
           className="mt-3"
           label="Importer depuis l'appareil"
           onFile={(file) => void onProductFile(file)}
         />
         <p className="mt-2 text-xs text-tdev-muted">
-          Image principale / fallback si une couleur n&apos;a pas encore de photo. Lien Drive
-          accepté si le fichier est partagé «&nbsp;Toute personne disposant du lien&nbsp;».
+          L&apos;image est prévisualisée immédiatement puis envoyée au serveur pour son
+          téléversement sécurisé vers Cloudinary.
         </p>
       </section>
 
@@ -437,37 +446,6 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                     <p className="text-sm font-extrabold uppercase tracking-[0.08em]">
                       {color}
                     </p>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                      <div className="min-w-0 flex-1">
-                        <Input
-                          name={`color-image-${color}`}
-                          label="URL"
-                          value={colorImageDraft[color] ?? ""}
-                          onChange={(event) =>
-                            setColorImageDraft((current) => ({
-                              ...current,
-                              [color]: event.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        className="w-full sm:w-auto"
-                        onClick={() => {
-                          const next = colorImageDraft[color]?.trim();
-                          if (next) {
-                            setColorImage(color, next);
-                            setColorImageDraft((current) => ({
-                              ...current,
-                              [color]: "",
-                            }));
-                          }
-                        }}
-                      >
-                        Lier URL
-                      </Button>
-                    </div>
                     <ImageFilePicker
                       label={`Importer photo ${color}`}
                       onFile={(file) => void onColorFile(color, file)}
@@ -624,15 +602,13 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                 <input
                   className="h-11 border border-tdev-anthracite px-2 text-sm font-normal"
                   placeholder="TEE-CORE-M-BLK"
-                  value={variant.sku}
-                  onChange={(event) =>
-                    setVariants((current) =>
-                      current.map((item, i) =>
-                        i === index ? { ...item, sku: event.target.value } : item,
-                      ),
-                    )
-                  }
+                  value={variant.sku || makeSku(name || slug, variant.size, variant.color, index)}
+                  readOnly
+                  aria-describedby={`sku-help-${index}`}
                 />
+                <span id={`sku-help-${index}`} className="text-xs font-normal text-tdev-muted">
+                  Généré automatiquement.
+                </span>
               </label>
               <label className="flex flex-col gap-1.5 text-sm font-medium">
                 Stock
