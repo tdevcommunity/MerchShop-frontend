@@ -7,7 +7,8 @@ import { AdminAction, AdminActionLink } from "@/features/admin/components/admin-
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
-import { adminRequest } from "@/features/admin/services/admin-client";
+import { formatAdminDate } from "@/features/admin/labels";
+import { adminRequest, adminList } from "@/features/admin/services/admin-client";
 import { formatMoney } from "@/lib/utils/format-money";
 import type { AdminProduct } from "@/types/admin";
 
@@ -18,13 +19,13 @@ export default function AdminProductsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
-    void adminRequest<AdminProduct[]>("/api/admin/products")
+    void adminList<AdminProduct>("/api/admin/products")
       .then(setProducts)
       .catch((loadError: Error) => setError(loadError.message));
   }, []);
 
   async function load() {
-    setProducts(await adminRequest<AdminProduct[]>("/api/admin/products"));
+    setProducts(await adminList<AdminProduct>("/api/admin/products"));
   }
 
   const rows = useMemo(() => {
@@ -34,7 +35,7 @@ export default function AdminProductsPage() {
       return list;
     }
     return list.filter((product) =>
-      [product.name, product.slug, product.category, ...product.variants.map((variant) => variant.sku)]
+      [product.name, product.slug, product.category, product.categoryLabel ?? "", ...product.variants.map((variant) => variant.sku)]
         .join(" ")
         .toLowerCase()
         .includes(q),
@@ -127,7 +128,7 @@ export default function AdminProductsPage() {
                     <td className="p-3">
                       <StatusBadge value={product.status} />
                     </td>
-                    <td className="p-3 text-tdev-muted">{product.createdAt.slice(0, 10)}</td>
+                    <td className="p-3 text-tdev-muted">{formatAdminDate(product.createdAt, 10)}</td>
                     <td className="p-3">
                       <div className="flex flex-wrap gap-1.5">
                         <AdminActionLink href={`/admin/products/${product.id}`} tone="brand">

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AdminModal } from "@/features/admin/components/admin-modal";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { StatusBadge } from "@/features/admin/components/status-badge";
-import { ORDER_STATUS_LABELS } from "@/features/admin/labels";
+import { formatAdminDate, ORDER_STATUS_LABELS } from "@/features/admin/labels";
 import { adminRequest } from "@/features/admin/services/admin-client";
 import { formatMoney } from "@/lib/utils/format-money";
 import { ORDER_TRANSITIONS, type AdminOrder } from "@/types/admin";
@@ -112,7 +112,7 @@ export function OrderDetailModal({
           <section className="border border-tdev-anthracite bg-tdev-white p-4">
             <h3 className="font-headline text-sm font-extrabold uppercase">Commande</h3>
             <p className="mt-2 text-sm text-tdev-muted">
-              {data.order.id} · {data.order.createdAt.slice(0, 16).replace("T", " ")}
+              {data.order.id} · {formatAdminDate(data.order.createdAt, 16).replace("T", " ")}
             </p>
             <ul className="mt-3 divide-y divide-tdev-border text-sm">
               {data.order.items.map((item) => (
@@ -168,7 +168,7 @@ export function OrderDetailModal({
             {data.order.pickupAgentEmail ? (
               <p className="mt-2 text-xs text-tdev-muted">
                 Retiré par {data.order.pickupAgentEmail} le{" "}
-                {data.order.pickupValidatedAt?.slice(0, 16).replace("T", " ")}
+                {formatAdminDate(data.order.pickupValidatedAt, 16).replace("T", " ")}
               </p>
             ) : null}
           </section>

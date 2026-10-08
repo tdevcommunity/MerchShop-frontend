@@ -37,24 +37,71 @@ export type AdminUser = {
   active: boolean;
 };
 
+/**
+ * Un compte du back-office, tel que `BackofficeUserResource` le renvoie.
+ *
+ * Les champs ne sont pas ceux d'un profil « id + name + active » invente pour
+ * l'ecran : ce sont ceux de la ressource, qui est le contrat. `uuid` et non
+ * `id` — les identifiants publics sont des UUID. `status` en entier et non un
+ * booleen — la base distingue un compte desactive d'un compte qui n'a jamais
+ * existe, et un booleen ferait disparaître cette difference.
+ */
 export type AdminUserPublic = {
-  id: string;
+  uuid: string;
+  firstname: string;
+  lastname: string;
+  fullName: string;
   email: string;
-  name: string;
+  phone: string | null;
   role: AdminRole;
-  active: boolean;
+  /** `0` inactif, `1` actif — l'entier de la nomenclature, tel quel. */
+  status: number;
+  canOperate: boolean;
+  permissions: {
+    manageCatalog: boolean;
+    adjustStock: boolean;
+    changeOrderStatus: boolean;
+    manageUsers: boolean;
+    viewAudit: boolean;
+  };
 };
 
+/**
+ * La reponse de `POST /admin/users` : le compte, plus le mot de passe.
+ *
+ * L'enveloppe `data` est celle de l'API, et le mot de passe temporaire est son
+ * voisin — il n'est jamais dans le compte, puisqu'un compte n'a aucun champ de
+ * mot de passe. Il n'appartient qu'a cette reponse, et une seule fois.
+ */
+export type AdminUserCreated = {
+  data: AdminUserPublic;
+  temporaryPassword: string;
+};
+
+/**
+ * Ce que l'ecran affiche apres une invitation ou une reinitialisation.
+ *
+ * Le compte y revient a plat parce que l'ecran ne gere ni enveloppe ni
+ * resource : il affiche un nom, une adresse, un rôle et le mot de passe a
+ * transmettre hors de l'application.
+ */
 export type AdminInviteResult = {
   user: AdminUserPublic;
   temporaryPassword: string;
 };
 
+/**
+ * Le compte connecte, tel que `GET /auth/me` le decrit.
+ *
+ * `fullName` et non `name` : le prénom et le nom sont deux colonnes, et la
+ * ressource les rend deja assembles.
+ */
 export type AdminSessionUser = {
-  id: string;
+  uuid: string;
   email: string;
-  name: string;
+  fullName: string;
   role: AdminRole;
+  active: boolean;
 };
 
 export const ADMIN_ROLE_LABELS: Record<AdminRole, string> = {
@@ -103,16 +150,33 @@ export type InventoryLog = {
   userEmail: string;
 };
 
+/**
+ * Ce que l'API renvoie dans `oldValue` / `newValue`.
+ *
+ * La colonne est un JSON en base : un ajustement de stock revient sous forme
+ * d'objet (`{"stock":28}`), une creation de compte sous forme de `null`, et une
+ * action plus ancienne peut revenir en chaîne. Le rendu doit donc passer par
+ * `formatAuditValue` : afficher l'objet tel quel ferait planter React
+ * (« Objects are not valid as a React child ») et emporter la page entière.
+ */
+export type AuditValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Record<string, unknown>;
+
 export type AuditLog = {
-  id: string;
+  /** L'API renvoie `uuid` et non `id` (les identifiants publics sont des UUID). */
+  uuid: string;
   createdAt: string;
   userId: string;
   userEmail: string;
   action: string;
   resource: string;
   resourceId: string;
-  oldValue: string | null;
-  newValue: string | null;
+  oldValue: AuditValue;
+  newValue: AuditValue;
 };
 
 export type AdminNotification = {

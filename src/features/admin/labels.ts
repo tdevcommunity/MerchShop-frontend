@@ -43,11 +43,21 @@ const EXTRA_STATUS_LABELS: Record<string, string> = {
   invalid: "Invalide",
 };
 
-export function statusLabel(value: string): string {
+export function statusLabel(value: unknown): string {
+  if (typeof value !== "string") {
+    return "Inconnu";
+  }
   return (
     ORDER_STATUS_LABELS[value as OrderStatus] ??
     PAYMENT_STATUS_LABELS[value as PaymentStatus] ??
     EXTRA_STATUS_LABELS[value] ??
     value.replaceAll("_", " ")
   );
+}
+
+export function formatAdminDate(value: unknown, length = 19): string {
+  if (typeof value !== "string" || !value) {
+    return "—";
+  }
+  return value.slice(0, length);
 }

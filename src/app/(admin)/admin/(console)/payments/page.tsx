@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
-import { adminRequest } from "@/features/admin/services/admin-client";
+import { formatAdminDate } from "@/features/admin/labels";
+import { adminList } from "@/features/admin/services/admin-client";
 import { formatMoney } from "@/lib/utils/format-money";
 import type { AdminPayment } from "@/types/admin";
 
@@ -15,7 +16,7 @@ export default function AdminPaymentsPage() {
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    void adminRequest<AdminPayment[]>("/api/admin/payments")
+    void adminList<AdminPayment>("/api/admin/payments")
       .then(setPayments)
       .catch((loadError: Error) => setError(loadError.message));
   }, []);
@@ -82,7 +83,7 @@ export default function AdminPaymentsPage() {
                   <td className="p-3">
                     <StatusBadge value={payment.status} />
                   </td>
-                  <td className="p-3 text-tdev-muted">{payment.createdAt.slice(0, 10)}</td>
+                  <td className="p-3 text-tdev-muted">{formatAdminDate(payment.createdAt, 10)}</td>
                 </tr>
               ))}
             </tbody>

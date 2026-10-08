@@ -318,6 +318,25 @@ export async function laravelFetch<T>(
 }
 
 /**
+ * Un appel a l'API, corps rendu tel quel — enveloppe `data` comprise.
+ *
+ * `laravelFetch` retire l'enveloppe, ce qui convient a une ressource seule et
+ * non a une reponse qui porte un second message a cote : l'invitation d'un
+ * compte renvoie le compte sous `data` ET le mot de passe temporaire a cote.
+ * L'enveloppe retiree emporterait le mot de passe avec elle, et
+ * l'administrateur n'aurait plus rien a transmettre.
+ */
+export async function laravelFetchEnvelope<T>(
+  request: Request,
+  path: string,
+  options: CallOptions = {},
+): Promise<T> {
+  const { body } = await call(request, path, options);
+
+  return body as T;
+}
+
+/**
  * Une liste, avec sa pagination.
  *
  * Le nombre de pages n'est pas un detail d'affichage : une liste paginee rend

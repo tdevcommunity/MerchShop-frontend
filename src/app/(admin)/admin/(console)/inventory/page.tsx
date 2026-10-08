@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
-import { adminRequest } from "@/features/admin/services/admin-client";
+import { formatAdminDate } from "@/features/admin/labels";
+import { adminRequest, adminList } from "@/features/admin/services/admin-client";
 import { cn } from "@/lib/utils/cn";
 import { INVENTORY_REASONS, type InventoryLog, type InventoryReason } from "@/types/admin";
 
@@ -57,8 +58,8 @@ export default function AdminInventoryPage() {
 
   useEffect(() => {
     void Promise.all([
-      adminRequest<InventoryRow[]>("/api/admin/inventory"),
-      adminRequest<InventoryLog[]>("/api/admin/inventory?history=1"),
+      adminList<InventoryRow>("/api/admin/inventory"),
+      adminList<InventoryLog>("/api/admin/inventory?history=1"),
     ])
       .then(([inventory, history]) => {
         setRows(inventory);
@@ -79,8 +80,8 @@ export default function AdminInventoryPage() {
 
   async function load() {
     const [inventory, history] = await Promise.all([
-      adminRequest<InventoryRow[]>("/api/admin/inventory"),
-      adminRequest<InventoryLog[]>("/api/admin/inventory?history=1"),
+      adminList<InventoryRow>("/api/admin/inventory"),
+      adminList<InventoryLog>("/api/admin/inventory?history=1"),
     ]);
     setRows(inventory);
     setLogs(history);
@@ -140,8 +141,8 @@ export default function AdminInventoryPage() {
     setSaving(true);
     setError(null);
     try {
-      await adminRequest(`/api/admin/inventory/${variantId}`, {
-        method: "PATCH",
+      await adminRequest(`/api/admin/inventory/${variantId}/adjust`, {
+        method: "POST",
         body: { delta: Number(delta), reason, note },
       });
       setNote("");
@@ -222,6 +223,7 @@ export default function AdminInventoryPage() {
                   return (
                     <li key={row.variantId} role="option" aria-selected={selected}>
                       <button
+                        key={row.variantId}
                         type="button"
                         className={cn(
                           "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left font-normal transition-colors",
@@ -363,7 +365,7 @@ export default function AdminInventoryPage() {
               <tbody>
                 {logs.slice(0, 40).map((log) => (
                   <tr key={log.id} className="border-t border-tdev-border">
-                    <td className="p-3 text-tdev-muted">{log.createdAt.slice(0, 16).replace("T", " ")}</td>
+                    <td className="p-3 text-tdev-muted">{formatAdminDate(log.createdAt, 16).replace("T", " ")}</td>
                     <td className="p-3">{log.productName}</td>
                     <td className="p-3">{log.sku}</td>
                     <td className="p-3">{log.previousStock}</td>

@@ -7,7 +7,8 @@ import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
 import { adminRequest } from "@/features/admin/services/admin-client";
-import type { AdminUserPublic } from "@/types/admin";
+import type { AdminInviteResult, AdminUserCreated, AdminUserPublic } from "@/types/admin";
+import { AccessCredentials } from "@/features/admin/components/access-credentials";
 
 type UsersResponse = {
   data: AdminUserPublic[];
@@ -30,6 +31,13 @@ export default function AdminUsersPage() {
   const [form, setForm] = useState<NewUserForm>(INITIAL_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  /*
+   * L'acces a transmettre une fois, exactement comme sur l'ecran d'invitation :
+   * quand le serveur genere le mot de passe, le compte est la, mais l'acces ne
+   * l'est que dans cette reponse. Le perdre de vue obligerait l'admin a creer
+   * un second compte.
+   */
+  const [access, setAccess] = useState<AdminInviteResult | null>(null);
 
   useEffect(() => {
     void adminRequest<UsersResponse>("/api/admin/users")
@@ -39,8 +47,11 @@ export default function AdminUsersPage() {
 
   async function resetPassword(id: string) {
     try {
-      await adminRequest(`/api/admin/users/${id}/reset-password`, { method: "POST" });
-      alert("Mot de passe réinitialisé. Le nouvel accès a été envoyé par email.");
+      const reset = await adminRequest<AdminUserCreated>(
+        `/api/admin/users/${id}/reset-password`,
+        { method: "POST" },
+      );
+      setAccess({ user: reset.data, temporaryPassword: reset.temporaryPassword });
     } catch (resetError) {
       alert(resetError instanceof Error ? resetError.message : "Réinitialisation impossible.");
     }
@@ -49,15 +60,22 @@ export default function AdminUsersPage() {
   async function submitNewUser(event: React.FormEvent) {
     event.preventDefault();
     setFormError(null);
+    setAccess(null);
     setSubmitting(true);
     try {
-      const created = await adminRequest<AdminUserPublic>("/api/admin/users", {
+      const created = await adminRequest<AdminUserCreated>("/api/admin/users", {
         method: "POST",
         body: form,
       });
-      setUsers((current) => (current ? [...current, created] : [created]));
+      setUsers((current) =>
+        current ? [...current, created.data] : [created.data],
+      );
       setShowForm(false);
       setForm(INITIAL_FORM);
+      setAccess({
+        user: created.data,
+        temporaryPassword: created.temporaryPassword,
+      });
     } catch (createError) {
       setFormError(createError instanceof Error ? createError.message : "Création impossible.");
     } finally {
@@ -123,6 +141,10 @@ export default function AdminUsersPage() {
         </form>
       ) : null}
 
+      {access ? (
+        <AccessCredentials access={access} className="mb-6" />
+      ) : null}
+
       <AdminState
         loading={!users && !error}
         error={error}
@@ -145,26 +167,26 @@ export default function AdminUsersPage() {
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} className="border-t border-tdev-border">
-                  <td className="p-3 font-medium">{user.name}</td>
+                <tr key={user.uuid} className="border-t border-tdev-border">
+                  <td className="p-3 font-medium">{user.fullName}</td>
                   <td className="p-3 text-tdev-muted">{user.email}</td>
                   <td className="p-3">
                     <StatusBadge value={user.role} />
                   </td>
                   <td className="p-3">
-                    <StatusBadge value={user.active ? "active" : "inactive"} />
+                    <StatusBadge value={user.status === 1 ? "active" : "inactive"} />
                   </td>
                   <td className="p-3">
                     <div className="flex gap-2">
                       <AdminAction
                         tone="brand"
-                        onClick={() => router.push(`/admin/users/${user.id}`)}
+                        onClick={() => router.push(`/admin/users/${user.uuid}`)}
                       >
                         Détail
                       </AdminAction>
                       <AdminAction
                         tone="default"
-                        onClick={() => void resetPassword(user.id)}
+                        onClick={() => void resetPassword(user.uuid)}
                       >
                         Réinitialiser mot de passe
                       </AdminAction>

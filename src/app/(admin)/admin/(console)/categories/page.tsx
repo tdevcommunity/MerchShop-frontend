@@ -7,7 +7,7 @@ import { AdminAction } from "@/features/admin/components/admin-action";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
-import { adminRequest } from "@/features/admin/services/admin-client";
+import { adminList, adminRequest } from "@/features/admin/services/admin-client";
 import type { AdminCategory } from "@/types/admin";
 
 export default function AdminCategoriesPage() {
@@ -18,13 +18,13 @@ export default function AdminCategoriesPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    void adminRequest<AdminCategory[]>("/api/admin/categories")
+    void adminList<AdminCategory>("/api/admin/categories")
       .then(setCategories)
       .catch((loadError: Error) => setError(loadError.message));
   }, []);
 
   async function load() {
-    setCategories(await adminRequest<AdminCategory[]>("/api/admin/categories"));
+    setCategories(await adminList<AdminCategory>("/api/admin/categories"));
   }
 
   async function create(event: FormEvent) {

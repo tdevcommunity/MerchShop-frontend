@@ -72,6 +72,23 @@ function uniqueColors(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.map((value) => value?.trim()).filter(Boolean))] as string[];
 }
 
+function slugify(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function makeSku(name: string, size: string | null, color: string, index: number): string {
+  const parts = [name, size, color, String(index + 1)]
+    .filter(Boolean)
+    .map((part) => slugify(String(part)).replace(/-/g, "").toUpperCase());
+  return parts.join("-").slice(0, 100) || `PRODUCT-${index + 1}`;
+}
+
 function initialColorImages(product?: AdminProduct): Record<string, string> {
   const map: Record<string, string> = {};
   for (const variant of product?.variants ?? []) {
@@ -100,10 +117,12 @@ function readAsDataUrl(file: File): Promise<string> {
 export function ProductForm({ categories, product }: ProductFormProps) {
   const router = useRouter();
   const [name, setName] = useState(product?.name ?? "");
-  const [slug, setSlug] = useState(product?.slug ?? "");
+  const slug = product?.slug ?? "";
   const [description, setDescription] = useState(product?.description ?? "");
   const [category, setCategory] = useState(
-    product?.category ?? categories[0]?.slug ?? "textile",
+    categories.find((item) => item.slug === product?.category)?.id ??
+      categories[0]?.id ??
+      "",
   );
   const [status, setStatus] = useState<ProductStatus>(product?.status ?? "draft");
   const [featured, setFeatured] = useState(product?.featured ?? false);
@@ -147,6 +166,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     () => uniqueColors(variants.map((variant) => variant.color)),
     [variants],
   );
+  const generatedSlug = slugify(name);
 
   function addImage() {
     if (!imageUrl.trim()) {
@@ -219,19 +239,16 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     try {
       const payload = {
         name,
-        slug,
+        slug: generatedSlug,
         description,
         category,
         status,
         featured,
-        images,
+        images: images.filter((src) => /^https?:\/\//i.test(src)),
         variants: variants.map((variant, index) => {
           const sku =
             variant.sku.trim() ||
-            [slug || name, variant.size, variant.color, index + 1]
-              .filter(Boolean)
-              .join("-")
-              .toUpperCase();
+            makeSku(name || slug, variant.size, variant.color, index);
           const color = variant.color || null;
           return {
             ...variant,
@@ -295,7 +312,13 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         <h2 className="font-headline text-lg font-extrabold uppercase">Général</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Input name="name" label="Nom" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input name="slug" label="Slug" value={slug} onChange={(e) => setSlug(e.target.value)} />
+          <Input
+            name="slug"
+            label="Slug automatique"
+            value={generatedSlug}
+            readOnly
+            hint="Généré à partir du nom du produit."
+          />
         </div>
         <label className="mt-4 block text-sm font-medium">
           Description
@@ -314,7 +337,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               onChange={(event) => setCategory(event.target.value)}
             >
               {categories.filter((item) => item.active).map((item) => (
-                <option key={item.id} value={item.slug}>
+                <option key={item.id} value={item.id}>
                   {item.label}
                 </option>
               ))}
@@ -624,15 +647,13 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                 <input
                   className="h-11 border border-tdev-anthracite px-2 text-sm font-normal"
                   placeholder="TEE-CORE-M-BLK"
-                  value={variant.sku}
-                  onChange={(event) =>
-                    setVariants((current) =>
-                      current.map((item, i) =>
-                        i === index ? { ...item, sku: event.target.value } : item,
-                      ),
-                    )
-                  }
+                  value={variant.sku || makeSku(name || slug, variant.size, variant.color, index)}
+                  readOnly
+                  aria-describedby={`sku-help-${index}`}
                 />
+                <span id={`sku-help-${index}`} className="text-xs font-normal text-tdev-muted">
+                  Généré automatiquement.
+                </span>
               </label>
               <label className="flex flex-col gap-1.5 text-sm font-medium">
                 Stock

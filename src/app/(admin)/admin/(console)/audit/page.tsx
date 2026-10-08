@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AdminState } from "@/features/admin/components/admin-state";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { StatusBadge } from "@/features/admin/components/status-badge";
+import { formatAdminDate } from "@/features/admin/labels";
 import { adminRequest } from "@/features/admin/services/admin-client";
 import type { AuditLog } from "@/types/admin";
 
@@ -22,7 +23,7 @@ export default function AdminAuditPage() {
 
   useEffect(() => {
     void adminRequest<AuditResponse>(
-      `/api/admin/audit?page=${page}&pageSize=${PAGE_SIZE}`,
+      `/api/admin/audit?page=${page}&per_page=${PAGE_SIZE}`,
     )
       .then((response) => {
         setLogs(response.data);
@@ -62,7 +63,7 @@ export default function AdminAuditPage() {
               </thead>
               <tbody>
                 {logs.map((log) => (
-                  <tr key={log.id} className="border-t border-tdev-border">
+                  <tr key={log.uuid} className="border-t border-tdev-border">
                     <td className="p-3">
                       <StatusBadge value={log.action} />
                     </td>
@@ -74,7 +75,7 @@ export default function AdminAuditPage() {
                       {log.userEmail}
                     </td>
                     <td className="p-3 text-tdev-muted">
-                      {log.createdAt.slice(0, 19)}
+                      {formatAdminDate(log.createdAt)}
                     </td>
                   </tr>
                 ))}
