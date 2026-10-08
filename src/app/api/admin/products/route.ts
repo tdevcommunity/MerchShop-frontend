@@ -102,6 +102,8 @@ export async function POST(request: Request) {
       body = (await request.json().catch(() => null)) as Record<string, unknown>;
     }
     const payload = toLaravelProductPayload(body);
+    let created: Record<string, unknown>;
+
     if (image || variantImageFiles.size > 0) {
       const multipart = new FormData();
       Object.entries(payload).forEach(([key, value]) => appendFields(multipart, value, key));
@@ -109,16 +111,25 @@ export async function POST(request: Request) {
       for (const [index, file] of variantImageFiles) {
         multipart.append(`variantImage[${index}]`, file, file.name);
       }
-      return NextResponse.json(
-        await laravelFetch(request, "/api/v1/products", { method: "POST", body: multipart }),
-      );
-    }
-    return NextResponse.json(
-      await laravelFetch(request, "/api/v1/products", {
+      created = await laravelFetch<Record<string, unknown>>(request, "/api/v1/products", {
+        method: "POST",
+        body: multipart,
+      });
+    } else {
+      created = await laravelFetch<Record<string, unknown>>(request, "/api/v1/products", {
         method: "POST",
         body: payload,
-      }),
-    );
+      });
+    }
+
+    /*
+     * La reponse d'ecriture subit la meme traduction que la liste. L'API rend
+     * `image_url`, `uuid` et un statut entier ; l'ecran lit `AdminProduct` —
+     * `imageUrl`, `id`, `status: "published"`. Sans cette passe, toute ligne
+     * remplacee par la reponse perdait sa vignette, son nom et son badge au
+     * moment meme ou l'on changeait ce statut.
+     */
+    return NextResponse.json(mapLaravelProduct(created));
   } catch (error) {
     return laravelErrorResponse(error);
   }

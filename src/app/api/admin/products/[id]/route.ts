@@ -99,6 +99,8 @@ export async function PATCH(request: Request, { params }: Context) {
       body = (await request.json().catch(() => null)) as Record<string, unknown>;
     }
     const payload = toLaravelProductPayload(body);
+    let updated: Record<string, unknown>;
+
     if (image || variantImageFiles.size > 0) {
       const multipart = new FormData();
       Object.entries(payload).forEach(([key, value]) => appendFields(multipart, value, key));
@@ -107,19 +109,23 @@ export async function PATCH(request: Request, { params }: Context) {
       for (const [index, file] of variantImageFiles) {
         multipart.append(`variantImage[${index}]`, file, file.name);
       }
-      return NextResponse.json(
-        await laravelFetch(request, `/api/v1/products/${id}`, {
-          method: "POST",
-          body: multipart,
-        }),
-      );
-    }
-    return NextResponse.json(
-      await laravelFetch(request, `/api/v1/products/${id}`, {
+      updated = await laravelFetch<Record<string, unknown>>(request, `/api/v1/products/${id}`, {
+        method: "POST",
+        body: multipart,
+      });
+    } else {
+      updated = await laravelFetch<Record<string, unknown>>(request, `/api/v1/products/${id}`, {
         method: "PUT",
         body: payload,
-      }),
-    );
+      });
+    }
+
+    /*
+     * meme traduction que la liste (voir POST) : l'ecran remplace la ligne
+     * modifiee par cette reponse, et c'est elle qui porte `imageUrl`, `name`
+     * et le statut lisible par le badge.
+     */
+    return NextResponse.json(mapLaravelProduct(updated));
   } catch (error) {
     return laravelErrorResponse(error);
   }
