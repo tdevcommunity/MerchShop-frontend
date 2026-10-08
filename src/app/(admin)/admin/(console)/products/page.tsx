@@ -20,7 +20,7 @@ export default function AdminProductsPage() {
 
   useEffect(() => {
     void adminList<AdminProduct>("/api/admin/products")
-      .then(setProducts)
+      .then((data) => setProducts(data.filter((p) => Boolean(p.id))))
       .catch((loadError: Error) => setError(loadError.message));
   }, []);
 
@@ -107,7 +107,7 @@ export default function AdminProductsPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((product) => {
+              {rows.map((product, idx) => {
                 const rawCategory: unknown = product.category;
                 const category =
                   typeof rawCategory === "string"
@@ -117,10 +117,13 @@ export default function AdminProductsPage() {
                         "name" in rawCategory
                       ? String((rawCategory as { name: unknown }).name)
                       : "";
-                const stock = product.variants.reduce((sum, variant) => sum + variant.stockQuantity, 0);
-                const price = Math.min(...product.variants.map((variant) => variant.unitPrice));
+                const stock = product.variants.reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0);
+                const price =
+                  product.variants.length > 0
+                    ? Math.min(...product.variants.map((v) => Number(v.unitPrice) || 0))
+                    : 0;
                 return (
-                  <tr key={product.id} className="border-t border-tdev-border">
+                  <tr key={product.id || product.slug || String(idx)} className="border-t border-tdev-border">
                     <td className="p-3">
                       {product.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -144,14 +147,14 @@ export default function AdminProductsPage() {
                           Modifier
                         </AdminActionLink>
                         <AdminAction
-                          disabled={busyId === product.id}
+                          disabled={!product.id || busyId === product.id}
                           onClick={() => void patch(product.id, { duplicate: true })}
                         >
                           Dupliquer
                         </AdminAction>
                         {product.status === "published" ? (
                           <AdminAction
-                            disabled={busyId === product.id}
+                            disabled={!product.id || busyId === product.id}
                             onClick={() => void patch(product.id, { status: "draft" })}
                           >
                             Dépublier
@@ -159,7 +162,7 @@ export default function AdminProductsPage() {
                         ) : (
                           <AdminAction
                             tone="success"
-                            disabled={busyId === product.id}
+                            disabled={!product.id || busyId === product.id}
                             onClick={() => void patch(product.id, { status: "published" })}
                           >
                             Publier
@@ -168,7 +171,7 @@ export default function AdminProductsPage() {
                         {product.status !== "archived" ? (
                           <AdminAction
                             tone="danger"
-                            disabled={busyId === product.id}
+                            disabled={!product.id || busyId === product.id}
                             onClick={() => {
                               if (window.confirm(`Archiver « ${product.name} » ?`)) {
                                 void patch(product.id, { status: "archived" });

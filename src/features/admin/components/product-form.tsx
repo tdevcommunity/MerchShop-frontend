@@ -131,6 +131,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [colorImages, setColorImages] = useState<Record<string, string>>(() =>
     initialColorImages(product),
   );
+  const [colorFiles, setColorFiles] = useState<Map<string, File>>(new Map());
   const [variants, setVariants] = useState<VariantDraft[]>(
     product?.variants.map((variant) => ({
       id: variant.id,
@@ -188,6 +189,11 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       delete next[color];
       return next;
     });
+    setColorFiles((current) => {
+      const next = new Map(current);
+      next.delete(color);
+      return next;
+    });
     setVariants((current) =>
       current.map((variant) =>
         variant.color === color ? { ...variant, imageUrl: "" } : variant,
@@ -198,6 +204,11 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   async function onColorFile(color: string, file: File) {
     const dataUrl = await readAsDataUrl(file);
     setColorImage(color, dataUrl);
+    setColorFiles((current) => {
+      const next = new Map(current);
+      next.set(color, file);
+      return next;
+    });
   }
 
   function applyColorToVariant(
@@ -243,12 +254,23 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             color,
             colorHex: color && isPaletteColor(color) ? null : variant.colorHex || null,
             imageUrl:
-              color && /^https?:\/\//i.test(colorImages[color] || variant.imageUrl || "")
-                ? colorImages[color] || variant.imageUrl
-                : null,
+              color && colorFiles.has(color)
+                ? null  // will be set by the controller after Cloudinary upload
+                : color && /^https?:\/\//i.test(colorImages[color] || variant.imageUrl || "")
+                  ? colorImages[color] || variant.imageUrl
+                  : null,
           };
         }),
       };
+
+      // Build map of variant index → File for new color image uploads
+      const variantFileMap = new Map<number, File>();
+      payload.variants.forEach((variant, index) => {
+        if (variant.color && colorFiles.has(variant.color)) {
+          variantFileMap.set(index, colorFiles.get(variant.color)!);
+        }
+      });
+
       if (product) {
         const nextVariants: AdminVariant[] = payload.variants.map((variant, index) => {
           const current =
@@ -274,24 +296,31 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           };
         });
         const body = { ...payload, variants: nextVariants };
-        if (imageFile) {
+        if (imageFile || variantFileMap.size > 0) {
           const form = new FormData();
           form.append("payload", JSON.stringify(body));
-          form.append("image", imageFile, imageFile.name);
+          if (imageFile) form.append("image", imageFile, imageFile.name);
+          for (const [index, file] of variantFileMap) {
+            form.append(`variantImage[${index}]`, file, file.name);
+          }
           await adminRequest(`/api/admin/products/${product.id}`, { method: "PATCH", body: form });
         } else {
           await adminRequest(`/api/admin/products/${product.id}`, { method: "PATCH", body });
         }
       } else {
-        if (imageFile) {
+        if (imageFile || variantFileMap.size > 0) {
           const form = new FormData();
           form.append("payload", JSON.stringify(payload));
-          form.append("image", imageFile, imageFile.name);
+          if (imageFile) form.append("image", imageFile, imageFile.name);
+          for (const [index, file] of variantFileMap) {
+            form.append(`variantImage[${index}]`, file, file.name);
+          }
           await adminRequest("/api/admin/products", { method: "POST", body: form });
         } else {
           await adminRequest("/api/admin/products", { method: "POST", body: payload });
         }
       }
+      setColorFiles(new Map());
       router.push("/admin/products");
       router.refresh();
     } catch (submitError) {
