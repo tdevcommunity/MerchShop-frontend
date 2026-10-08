@@ -108,6 +108,15 @@ export default function AdminProductsPage() {
             </thead>
             <tbody>
               {rows.map((product) => {
+                const rawCategory: unknown = product.category;
+                const category =
+                  typeof rawCategory === "string"
+                    ? rawCategory
+                    : rawCategory &&
+                        typeof rawCategory === "object" &&
+                        "name" in rawCategory
+                      ? String((rawCategory as { name: unknown }).name)
+                      : "";
                 const stock = product.variants.reduce((sum, variant) => sum + variant.stockQuantity, 0);
                 const price = Math.min(...product.variants.map((variant) => variant.unitPrice));
                 return (
@@ -121,7 +130,7 @@ export default function AdminProductsPage() {
                       )}
                     </td>
                     <td className="p-3 font-medium">{product.name}</td>
-                    <td className="p-3">{product.category}</td>
+                    <td className="p-3">{category}</td>
                     <td className="p-3">{formatMoney(price)}</td>
                     <td className="p-3">{product.variants.length}</td>
                     <td className="p-3">{stock}</td>

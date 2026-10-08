@@ -6,7 +6,13 @@ function asNumber(value: unknown, fallback = 0) {
 }
 
 export function mapLaravelProduct(product: LaravelProduct) {
-  const category = (product.category ?? {}) as Record<string, unknown>;
+  const rawCategory = product.category;
+  const category =
+    rawCategory && typeof rawCategory === "object"
+      ? (rawCategory as Record<string, unknown>)
+      : {};
+  const categoryValue =
+    typeof rawCategory === "string" ? rawCategory : undefined;
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const image =
     typeof product.imageUrl === "string"
@@ -20,8 +26,8 @@ export function mapLaravelProduct(product: LaravelProduct) {
     slug: String(product.slug ?? ""),
     name: String(product.name ?? ""),
     description: String(product.description ?? ""),
-    category: String(category.slug ?? product.categorySlug ?? ""),
-    categoryLabel: String(category.name ?? product.categoryLabel ?? ""),
+    category: String(category.slug ?? product.categorySlug ?? categoryValue ?? ""),
+    categoryLabel: String(category.name ?? product.categoryLabel ?? categoryValue ?? ""),
     imageUrl: image,
     badge: null,
     status: product.status === 1 || product.status === "1" ? "published" : "draft",
