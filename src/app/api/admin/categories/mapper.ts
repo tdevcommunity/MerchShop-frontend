@@ -17,14 +17,12 @@ const ACTIVE = 1;
  * donne.
  *
  * `undefined` se serialise en cle absente (JSON.stringify retire les valeurs
- * `undefined`), donc le champ n'est jamais envoye par hasard. Pour une
- * creation, l'absence de statut veut dire active ; pour une mise a jour, elle
- * veut dire « ne pas toucher au champ », ce qui rend la mise a jour partielle
- * possible.
+ * `undefined`), donc le champ n'est jamais envoye par hasard : c'est le cas
+ * d'une mise a jour qui ne touche pas au statut.
  *
- * Avant, la valeur inconnue retombait sur `0` : une categorie creee depuis le
- * formulaire — qui n'envoie ni `status` ni `active` — partait desactivee et
- * n'apparaissait ni dans le menu ni dans les filtres.
+ * Avant, la valeur inconnue retombait sur `0` — `... ?? 0` — et une categorie
+ * creee depuis le formulaire (qui n'envoie ni `status` ni `active`) partait
+ * desactivee : invisible dans le menu, dans les filtres et dans les liens.
  */
 export function toLaravelStatus(body: CategoryPayload): 0 | 1 | undefined {
   if (body.active === false) return 0;
@@ -62,8 +60,8 @@ function toApiFields(body: CategoryPayload): CategoryPayload {
  *
  * Le formulaire n'a pas de curseur de publication — il n'envoie que le libelle
  * et le slug — et une categorie ajoutee au guichet doit paraitre au catalogue
- * tout de suite. Le defaut est donc `1`, et non le champ omis : le comportement
- * reste le meme si le defaut cote backend changeait un jour.
+ * tout de suite. Le defaut est donc `1`, et non le champ omis : le
+ * comportement reste le meme si le defaut cote backend changeait un jour.
  */
 export function toStoreCategoryPayload(body: CategoryPayload): CategoryPayload {
   return { ...toApiFields(body), status: toLaravelStatus(body) ?? ACTIVE };
