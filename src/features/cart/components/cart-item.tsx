@@ -25,6 +25,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
           src={item.imageUrl}
           alt={item.productName}
           className="h-full aspect-auto"
+          width={256}
         />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-3">
