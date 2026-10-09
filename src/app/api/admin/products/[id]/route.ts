@@ -19,9 +19,18 @@ function toLaravelProductPayload(body: Record<string, unknown>) {
       : body.status === "draft" || body.status === "archived" || body.status === "inactive"
         ? 0
         : body.status;
+  const categoryRef = body.category_uuid ?? body.category_id ?? body.category;
+  const categoryUuid = validUuid(categoryRef);
+  const categoryId =
+    categoryUuid || categoryRef == null || categoryRef === ""
+      ? undefined
+      : Number(categoryRef);
+
   return {
     ...body,
-    category_id: body.category_id == null ? undefined : Number(body.category_id ?? body.category),
+    category: undefined,
+    category_id: Number.isFinite(categoryId) ? categoryId : undefined,
+    category_uuid: categoryUuid ?? undefined,
     status,
     variants: Array.isArray(body.variants)
       ? body.variants.map((variant) => {
@@ -66,11 +75,11 @@ export async function GET(request: Request, { params }: Context) {
   if (auth.error) return auth.error;
   try {
     const { id } = await params;
-    const result = await laravelFetch<{ data?: Record<string, unknown> }>(
+    const result = await laravelFetch<Record<string, unknown>>(
       request,
       `/api/v1/products/${id}`,
     );
-    return NextResponse.json(result.data ? mapLaravelProduct(result.data) : result);
+    return NextResponse.json(mapLaravelProduct(result));
   } catch (error) {
     return laravelErrorResponse(error);
   }

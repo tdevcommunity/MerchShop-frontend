@@ -7,6 +7,23 @@ export class AdminClientError extends Error {
   }
 }
 
+function firstValidationMessage(
+  fields: Record<string, string[] | string> | undefined,
+): string | null {
+  if (!fields || typeof fields !== "object") {
+    return null;
+  }
+  for (const value of Object.values(fields)) {
+    if (Array.isArray(value) && typeof value[0] === "string" && value[0]) {
+      return value[0];
+    }
+    if (typeof value === "string" && value) {
+      return value;
+    }
+  }
+  return null;
+}
+
 export async function adminRequest<T>(
   path: string,
   options: Omit<RequestInit, "body"> & { body?: unknown } = {},
@@ -28,10 +45,23 @@ export async function adminRequest<T>(
   if (!response.ok) {
     let message = "Impossible de traiter la demande.";
     try {
-      const data = (await response.json()) as { message?: string };
-      if (data.message) {
-        message = data.message;
-      }
+      const data = (await response.json()) as {
+        message?: string;
+        error?: {
+          message?: string;
+          details?: { fields?: Record<string, string[] | string> };
+        };
+        details?: { fields?: Record<string, string[] | string> };
+        errors?: Record<string, string[] | string>;
+      };
+      const fields =
+        data.details?.fields ?? data.error?.details?.fields ?? data.errors;
+      const firstFieldMessage = firstValidationMessage(fields);
+      message =
+        firstFieldMessage ||
+        data.error?.message ||
+        data.message ||
+        message;
     } catch {
       // ignore
     }
