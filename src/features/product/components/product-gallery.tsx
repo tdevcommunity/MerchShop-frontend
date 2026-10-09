@@ -16,6 +16,7 @@ export function ProductGallery({ name, imageUrl }: ProductGalleryProps) {
         alt={name}
         className="min-h-[320px] aspect-[4/5] lg:min-h-[560px]"
         priority
+        width={1600}
         sizes="(min-width: 1024px) 50vw, 100vw"
       />
     </div>

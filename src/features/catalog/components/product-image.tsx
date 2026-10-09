@@ -1,8 +1,8 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils/cn";
 import {
+  displayProductImageSrc,
   isRemoteProductImage,
-  resolveProductImageSrc,
 } from "@/features/catalog/utils/image-src";
 
 type ProductImageProps = {
@@ -11,6 +11,8 @@ type ProductImageProps = {
   className?: string;
   sizes?: string;
   priority?: boolean;
+  /** Largeur max demandée à Cloudinary (défaut carte catalogue). */
+  width?: number;
 };
 
 export function ProductImage({
@@ -19,6 +21,7 @@ export function ProductImage({
   className,
   sizes = "(min-width: 1024px) 400px, 100vw",
   priority = false,
+  width = 900,
 }: ProductImageProps) {
   if (!src) {
     return (
@@ -37,10 +40,10 @@ export function ProductImage({
     );
   }
 
-  const resolved = resolveProductImageSrc(src);
+  const resolved = displayProductImageSrc(src, { width });
 
-  // URLs admin libres (Drive, data URL, CDN non whitelisté) : <img> natif.
-  // next/image reste pour les assets locaux une fois le CDN produit configuré.
+  // Cloudinary et autres CDN : livraison déjà optimisée (f_auto → WebP/AVIF).
+  // next/image reste pour les assets locaux.
   if (isRemoteProductImage(resolved)) {
     return (
       <div className={cn("relative overflow-hidden bg-tdev-surface", className)}>
@@ -50,6 +53,7 @@ export function ProductImage({
           alt={alt}
           className="absolute inset-0 size-full object-cover"
           loading={priority ? "eager" : "lazy"}
+          decoding="async"
           referrerPolicy="no-referrer"
         />
       </div>

@@ -14,9 +14,9 @@ import { cn } from "@/lib/utils/cn";
 import { TEXTILE_SIZES } from "@/types/catalog";
 import type { AdminCategory, AdminProduct, AdminVariant, ProductStatus } from "@/types/admin";
 
-/** Aligné sur `max:5120` (Ko) côté API Laravel. */
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const MAX_IMAGE_MESSAGE = "L’image ne doit pas dépasser 5 Mo.";
+/** Aligné sur `max:20480` (Ko) côté API Laravel / PHP 20M. */
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+const MAX_IMAGE_MESSAGE = "L’image ne doit pas dépasser 20 Mo.";
 
 type VariantDraft = {
   id?: string;
