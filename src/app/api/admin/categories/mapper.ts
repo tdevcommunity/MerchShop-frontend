@@ -43,19 +43,13 @@ export function toLaravelStatus(body: CategoryPayload): 0 | 1 | undefined {
 function toApiFields(body: CategoryPayload): CategoryPayload {
   const payload: CategoryPayload = { ...body };
   const name = body.name ?? body.label;
-  const sortOrder = body.sort_order ?? body.sortOrder;
 
   delete payload.label;
   delete payload.active;
   delete payload.status;
-  delete payload.sortOrder;
 
   if (typeof name === "string" && name !== "") {
     payload.name = name;
-  }
-
-  if (sortOrder !== undefined && sortOrder !== null && sortOrder !== "") {
-    payload.sort_order = Number(sortOrder);
   }
 
   return payload;
@@ -101,7 +95,7 @@ export function toUpdateCategoryPayload(body: CategoryPayload): CategoryPayload 
  */
 export function toAdminCategory(category: CategoryPayload) {
   return {
-    id: String(category.uuid ?? category.id ?? ""),
+    id: String(category.id ?? category.uuid ?? ""),
     slug: String(category.slug ?? ""),
     label: String(category.label ?? category.name ?? ""),
     active: category.active ?? (category.status === 1 || category.status === "active"),

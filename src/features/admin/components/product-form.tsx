@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useId, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button, buttonClassName } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { adminRequest } from "@/features/admin/services/admin-client";
@@ -13,10 +13,6 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { TEXTILE_SIZES } from "@/types/catalog";
 import type { AdminCategory, AdminProduct, AdminVariant, ProductStatus } from "@/types/admin";
-
-/** Aligné sur `max:5120` (Ko) côté API Laravel. */
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const MAX_IMAGE_MESSAGE = "L’image ne doit pas dépasser 5 Mo.";
 
 type VariantDraft = {
   id?: string;
@@ -120,10 +116,6 @@ function readAsDataUrl(file: File): Promise<string> {
 
 export function ProductForm({ categories, product }: ProductFormProps) {
   const router = useRouter();
-  const params = useParams<{ id?: string }>();
-  const routeProductId =
-    typeof params.id === "string" && params.id.length > 0 ? params.id : null;
-  const productId = routeProductId || product?.id || null;
   const [name, setName] = useState(product?.name ?? "");
   const slug = product?.slug ?? "";
   const [description, setDescription] = useState(product?.description ?? "");
@@ -177,11 +169,6 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const generatedSlug = slugify(name);
 
   async function onProductFile(file: File) {
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError(MAX_IMAGE_MESSAGE);
-      return;
-    }
-    setError(null);
     const dataUrl = await readAsDataUrl(file);
     setImageFile(file);
     setImages((current) => [...current, dataUrl]);
@@ -215,11 +202,6 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   }
 
   async function onColorFile(color: string, file: File) {
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError(MAX_IMAGE_MESSAGE);
-      return;
-    }
-    setError(null);
     const dataUrl = await readAsDataUrl(file);
     setColorImage(color, dataUrl);
     setColorFiles((current) => {
@@ -289,17 +271,14 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         }
       });
 
-      if (product || productId) {
-        if (!productId) {
-          throw new Error("Identifiant produit manquant.");
-        }
+      if (product) {
         const nextVariants: AdminVariant[] = payload.variants.map((variant, index) => {
           const current =
-            product?.variants.find((item) => item.id === variant.id) ??
-            product?.variants[index];
+            product.variants.find((item) => item.id === variant.id) ??
+            product.variants[index];
           return {
             id: variant.id ?? current?.id ?? `var_new_${index}`,
-            productId,
+            productId: product.id,
             size: variant.size,
             color: variant.color,
             colorHex:
@@ -324,9 +303,9 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           for (const [index, file] of variantFileMap) {
             form.append(`variantImage[${index}]`, file, file.name);
           }
-          await adminRequest(`/api/admin/products/${productId}`, { method: "PATCH", body: form });
+          await adminRequest(`/api/admin/products/${product.id}`, { method: "PATCH", body: form });
         } else {
-          await adminRequest(`/api/admin/products/${productId}`, { method: "PATCH", body });
+          await adminRequest(`/api/admin/products/${product.id}`, { method: "PATCH", body });
         }
       } else {
         if (imageFile || variantFileMap.size > 0) {

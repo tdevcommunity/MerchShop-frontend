@@ -71,19 +71,14 @@ describe("toUpdateCategoryPayload", () => {
   it("envoie 1 quand on active", () => {
     expect(toUpdateCategoryPayload({ active: true }).status).toBe(1);
   });
-
-  it("envoie sort_order depuis sortOrder", () => {
-    expect(toUpdateCategoryPayload({ sortOrder: 2 })).toEqual({ sort_order: 2 });
-    expect(toUpdateCategoryPayload({ sortOrder: 2 })).not.toHaveProperty("sortOrder");
-  });
 });
 
 describe("toAdminCategory", () => {
-  it("lit la ressource Laravel (name / status) et prefere l'uuid", () => {
+  it("lit la ressource Laravel (name / status)", () => {
     expect(
       toAdminCategory({ id: "12", uuid: "abc", name: "Textile", slug: "textile", status: 1 }),
     ).toEqual({
-      id: "abc",
+      id: "12",
       slug: "textile",
       label: "Textile",
       active: true,
