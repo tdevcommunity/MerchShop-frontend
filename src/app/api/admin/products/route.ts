@@ -37,18 +37,9 @@ function toLaravelProductPayload(body: Record<string, unknown>) {
       })
     : undefined;
 
-  const categoryRef = body.category_uuid ?? body.category_id ?? body.category;
-  const categoryUuid = validUuid(categoryRef);
-  const categoryId =
-    categoryUuid || categoryRef == null || categoryRef === ""
-      ? undefined
-      : Number(categoryRef);
-
   return {
     ...body,
-    category: undefined,
-    category_id: Number.isFinite(categoryId) ? categoryId : undefined,
-    category_uuid: categoryUuid ?? undefined,
+    category_id: Number(body.category_id ?? body.category),
     status,
     variants,
   };
