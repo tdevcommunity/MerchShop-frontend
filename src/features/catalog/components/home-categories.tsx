@@ -12,7 +12,10 @@ type HomeCategoriesProps = {
 
 export function HomeCategories({ products, categories }: HomeCategoriesProps) {
   return (
-    <section className="flex flex-col gap-7 border-b border-tdev-anthracite px-5 py-16 lg:px-12">
+    <section
+      id="collections"
+      className="flex flex-col gap-7 border-b border-tdev-anthracite px-5 py-16 lg:px-12"
+    >
       <div className="flex items-end justify-between gap-4">
         <h2 className="font-headline text-3xl font-extrabold uppercase tracking-tight lg:text-[44px]">
           Catégories

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CatalogGrid } from "@/features/catalog/components/catalog-grid";
 import { CategoryFilter } from "@/features/catalog/components/category-filter";
@@ -13,6 +14,7 @@ type CatalogBrowserProps = {
   activeCategory?: string;
   initialQuery?: string;
   heading: string;
+  sortNewest?: boolean;
 };
 
 export function CatalogBrowser({
@@ -21,6 +23,7 @@ export function CatalogBrowser({
   activeCategory,
   initialQuery = "",
   heading,
+  sortNewest = false,
 }: CatalogBrowserProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -41,6 +44,9 @@ export function CatalogBrowser({
       if (activeCategory) {
         params.set("category", activeCategory);
       }
+      if (sortNewest) {
+        params.set("sort", "newest");
+      }
       const trimmed = query.trim();
       if (trimmed) {
         params.set("query", trimmed);
@@ -56,7 +62,7 @@ export function CatalogBrowser({
     }, 250);
 
     return () => window.clearTimeout(handle);
-  }, [activeCategory, pathname, query, router]);
+  }, [activeCategory, pathname, query, router, sortNewest]);
 
   const filtered = useMemo(
     () => filterProductsByQuery(products, query),
@@ -73,10 +79,20 @@ export function CatalogBrowser({
           <h1 className="font-headline text-4xl font-extrabold uppercase tracking-tight lg:text-[44px]">
             {heading}
           </h1>
-          <p className="text-sm text-tdev-muted">
-            {filtered.length} article{filtered.length > 1 ? "s" : ""}
-            {query.trim() ? ` pour « ${query.trim()} »` : ""}
-          </p>
+          <div className="flex items-center gap-4">
+            {sortNewest ? (
+              <Link
+                href="/shop"
+                className="text-[11px] font-bold uppercase tracking-[0.12em] text-tdev-muted underline-offset-2 hover:text-tdev-anthracite hover:underline"
+              >
+                Voir tout
+              </Link>
+            ) : null}
+            <p className="text-sm text-tdev-muted">
+              {filtered.length} article{filtered.length > 1 ? "s" : ""}
+              {query.trim() ? ` pour « ${query.trim()} »` : ""}
+            </p>
+          </div>
         </div>
 
         <label className="flex max-w-xl flex-col gap-1.5">
@@ -109,6 +125,7 @@ export function CatalogBrowser({
           categories={categories}
           active={activeCategory}
           query={query.trim() || undefined}
+          sort={sortNewest ? "newest" : undefined}
         />
       </header>
 
