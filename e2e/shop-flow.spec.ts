@@ -35,6 +35,9 @@ test("parcours checkout mocké jusqu'au reçu", async ({ page }) => {
   await page.getByLabel("Prénom").fill("Ama");
   await page.getByLabel("Nom", { exact: true }).fill("Koffi");
   await page.getByLabel("Email").fill("ama.koffi@example.com");
+  // Le téléphone est exige des les coordonnees : l'API refuse toute commande
+  // sans lui, quel que soit le moyen de paiement.
+  await page.getByLabel("Numéro de téléphone").fill("+22890123456");
   await page
     .getByRole("button", {
       name: /continuer vers le paiement|passer au paiement/i,
@@ -42,7 +45,6 @@ test("parcours checkout mocké jusqu'au reçu", async ({ page }) => {
     .click();
 
   await page.getByRole("button", { name: /mobile money/i }).click();
-  await page.getByLabel("Numéro de téléphone").fill("+22890123456");
   await page.getByRole("button", { name: /payer/i }).click();
 
   await expect(

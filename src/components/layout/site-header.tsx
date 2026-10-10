@@ -15,8 +15,8 @@ import { cn } from "@/lib/utils/cn";
 
 const nav = [
   { href: "/shop", label: "Boutique" },
-  { href: "/shop", label: "Nouveautés" },
-  { href: "/shop?category=textile", label: "Collections" },
+  { href: "/shop?sort=newest", label: "Nouveautés" },
+  { href: "/#collections", label: "Collections" },
   { href: "/#festival", label: "Le Festival" },
 ];
 
@@ -52,14 +52,14 @@ export function SiteHeader() {
           className="hidden flex-1 items-center gap-8 pl-10 lg:flex"
         >
           {nav.map((item) => {
-            const isBoutique = item.label === "Boutique" && pathname.startsWith("/shop");
+            const isActive = item.label === "Boutique" && pathname === "/shop";
             return (
               <Link
                 key={item.label}
                 href={item.href}
                 className={cn(
                   "flex min-h-11 items-center text-sm transition-colors duration-150",
-                  isBoutique
+                  isActive
                     ? "font-semibold text-tdev-anthracite"
                     : "font-medium text-tdev-muted hover:text-tdev-anthracite",
                 )}
