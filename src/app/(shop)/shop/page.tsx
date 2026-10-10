@@ -9,7 +9,7 @@ export const metadata = createMetadata({
 });
 
 type ShopPageProps = {
-  searchParams: Promise<{ category?: string; query?: string }>;
+  searchParams: Promise<{ category?: string; query?: string; sort?: string }>;
 };
 
 export default async function ShopPage({ searchParams }: ShopPageProps) {
@@ -19,17 +19,28 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
     ? params.category
     : undefined;
   const initialQuery = params.query?.trim() ?? "";
+  const sortNewest = params.sort === "newest";
   const products = await listProducts({ category });
-  const heading = category ? categoryLabel(category, categories) : "La boutique";
+
+  // Tri par nouveauté : l'API renvoie par ordre d'insertion ; on inverse pour
+  // mettre les plus récents en premier sans requete supplémentaire.
+  const sortedProducts = sortNewest ? [...products].reverse() : products;
+
+  const heading = sortNewest
+    ? "Nouveautés"
+    : category
+      ? categoryLabel(category, categories)
+      : "La boutique";
 
   return (
     <div className="flex flex-col px-5 py-10 lg:px-12 lg:py-16">
       <CatalogBrowser
-        products={products}
+        products={sortedProducts}
         categories={categories}
         activeCategory={category}
         initialQuery={initialQuery}
         heading={heading}
+        sortNewest={sortNewest}
       />
     </div>
   );

@@ -6,9 +6,10 @@ type CategoryFilterProps = {
   categories: Category[];
   active?: string;
   query?: string;
+  sort?: string;
 };
 
-function hrefFor(category?: string, query?: string): string {
+function hrefFor(category?: string, query?: string, sort?: string): string {
   const params = new URLSearchParams();
   if (category) {
     params.set("category", category);
@@ -16,20 +17,23 @@ function hrefFor(category?: string, query?: string): string {
   if (query) {
     params.set("query", query);
   }
+  if (sort) {
+    params.set("sort", sort);
+  }
   const search = params.toString();
   return search ? `/shop?${search}` : "/shop";
 }
 
-export function CategoryFilter({ categories, active, query }: CategoryFilterProps) {
+export function CategoryFilter({ categories, active, query, sort }: CategoryFilterProps) {
   return (
     <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrer par catégorie">
-      <FilterPill href={hrefFor(undefined, query)} selected={!active}>
+      <FilterPill href={hrefFor(undefined, query, sort)} selected={!active}>
         Tous
       </FilterPill>
       {categories.map((category) => (
         <FilterPill
           key={category.slug}
-          href={hrefFor(category.slug, query)}
+          href={hrefFor(category.slug, query, sort)}
           selected={active === category.slug}
         >
           {category.label}
