@@ -17,7 +17,13 @@ import { createCheckoutSession } from "@/features/checkout/services/checkout-ser
 import { cartStore } from "@/features/cart/store/cart-store";
 import { checkoutDraftStore } from "@/features/checkout/store/checkout-draft-store";
 import { openFedapayCheckout } from "@/features/payment/services/fedapay-service";
-import { rememberPendingPayment } from "@/features/payment/store/pending-payment";
+import {
+  backupCart,
+  clearCartBackup,
+  readPendingPayment,
+  rememberPendingPayment,
+  restoreCart,
+} from "@/features/payment/store/pending-payment";
 import { formatMoney } from "@/lib/utils/format-money";
 import { toUserMessage, ValidationError } from "@/lib/api/errors";
 import { validateCheckoutDraft } from "@/lib/validation/checkout";
@@ -29,6 +35,12 @@ export function PaymentProcessingView() {
   const [status, setStatus] = useState<"processing" | "failed">("processing");
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  /*
+   * La commande creee dans cette navigation. Elle survit au vidage du panier,
+   * qui a lieu des sa creation : c'est elle, et non le panier, qui porte le
+   * montant, la reference et le moyen de paiement a afficher.
+   */
+  const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const started = useRef(false);
 
   /*
@@ -43,8 +55,18 @@ export function PaymentProcessingView() {
    */
   const pendingOrder = useRef<Promise<Order> | null>(null);
 
+  /*
+   * Memoire de la commande creee, lisible de maniere synchrone par l'effet et
+   * par la reprise : le state React peut ne pas etre encore rendu quand le
+   * rejeu d'effet interroge l'etat, et rejouer la creation d'une commande
+   * reservee en stock est precisement ce qu'il faut eviter.
+   */
+  const createdOrderRef = useRef<Order | null>(null);
+
   useEffect(() => {
-    if (started.current) {
+    // Une commande deja creee reste payable meme si le panier a ete vide : la
+    // reprise ne doit pas etre bloquee par le drapeau des rejeux d'effet.
+    if (started.current && !createdOrderRef.current) {
       return;
     }
 
@@ -52,11 +74,26 @@ export function PaymentProcessingView() {
     cartStore.hydrate();
     const readyCart = cartStore.getSnapshot();
     const readyDraft = checkoutDraftStore.getSnapshot();
-    if (readyCart.items.length === 0) {
-      router.replace("/cart");
+
+    // Panier vide et aucune commande creee dans cette navigation : rien a
+    // payer. Une commande deja ouverte chez l'operateur, elle, se suit sur la
+    // page de retour plutot que d'etre perdue derriere un panier vide.
+    if (readyCart.items.length === 0 && !createdOrderRef.current) {
+      /*
+       * Restauration du panier s'il y a une sauvegarde (échec précédent).
+       */
+      const backedUpCart = restoreCart();
+      if (backedUpCart) {
+        backedUpCart.forEach((item) => {
+          cartStore.addItem(item);
+        });
+        router.replace("/checkout/payment");
+        return;
+      }
+      router.replace(readPendingPayment() ? "/checkout/payment-return" : "/cart");
       return;
     }
-    if (!readyDraft.paymentMethod) {
+    if (readyCart.items.length > 0 && !readyDraft.paymentMethod) {
       router.replace("/checkout/payment");
       return;
     }
@@ -66,28 +103,40 @@ export function PaymentProcessingView() {
 
     async function run() {
       try {
-        const latestDraft = checkoutDraftStore.getSnapshot();
-        const latestCart = cartStore.getSnapshot();
-        validateCheckoutDraft(latestDraft);
+        let order = createdOrderRef.current;
 
-        pendingOrder.current ??= createCheckoutSession(
-          latestDraft,
-          latestCart.items,
-        );
-        const order = await pendingOrder.current;
-        if (cancelled) {
-          return;
+        if (!order) {
+          const latestDraft = checkoutDraftStore.getSnapshot();
+          const latestCart = cartStore.getSnapshot();
+          validateCheckoutDraft(latestDraft);
+
+          pendingOrder.current ??= createCheckoutSession(
+            latestDraft,
+            latestCart.items,
+          );
+          order = await pendingOrder.current;
+          if (cancelled) {
+            return;
+          }
+
+          createdOrderRef.current = order;
+          setCreatedOrder(order);
+
+          /*
+           * Sauvegarde du panier avant de le vider pour restauration en cas d'échec.
+           */
+          backupCart(latestCart.items);
+
+          /*
+           * Le panier est vide a partir d'ici : la commande existe, la facturer
+           * ne depend plus de lui. Il ne doit surtout pas etre reconstitue si
+           * l'acheteur revient en arriere depuis la page de l'operateur, sinon il
+           * verrait ses articles toujours disponibles et pourrait en commander
+           * une seconde fois.
+           */
+          cartStore.clear();
+          checkoutDraftStore.clear();
         }
-
-        /*
-         * Le panier est vide a partir d'ici : la commande existe, la facturer
-         * ne depend plus de lui. Il ne doit surtout pas etre reconstitue si
-         * l'acheteur revient en arriere depuis la page de l'operateur, sinon il
-         * verrait ses articles toujours disponibles et pourrait en commander
-         * une seconde fois.
-         */
-        cartStore.clear();
-        checkoutDraftStore.clear();
 
         /*
          * Le reglement se fait chez FedaPay : on ouvre la page de l'operateur
@@ -133,6 +182,16 @@ export function PaymentProcessingView() {
   }, [router, retryKey]);
 
   function retry() {
+    if (createdOrderRef.current) {
+      // La commande existe et le panier a ete vide : une nouvelle tentative
+      // rouvre le reglement de cette commande. Rejouer l'effet entier en
+      // repartant du panier vide recreerait une commande alors qu'une facture
+      // est deja en attente.
+      setStatus("processing");
+      setError(null);
+      setRetryKey((value) => value + 1);
+      return;
+    }
     started.current = false;
     // Une nouvelle tentative doit repartir d'une commande neuve. Rejouer la
     // precedente echouee rapporterait le meme echec, et laisserait l'acheteur
@@ -150,7 +209,9 @@ export function PaymentProcessingView() {
    * deja transmis que l'on aurait enregistre.
    */
   const methodLabel =
-    draft.paymentMethod === "card" ? "Carte bancaire" : "Mobile Money";
+    (createdOrder?.paymentMethod ?? draft.paymentMethod) === "card"
+      ? "Carte bancaire"
+      : "Mobile Money";
 
   return (
     <div className="flex min-h-dvh flex-col bg-[#141615] text-tdev-white">
@@ -206,7 +267,7 @@ export function PaymentProcessingView() {
               <span className="font-bold text-tdev-white">FedaPay</span> pour
               valider ton reglement de{" "}
               <span className="font-bold text-tdev-orange">
-                {formatMoney(cart.subtotal)}
+                {formatMoney(createdOrder?.total ?? cart.subtotal)}
               </span>
               . Tu seras ramene ici juste apres.
             </p>
@@ -222,7 +283,9 @@ export function PaymentProcessingView() {
                 <dt className="text-xs font-semibold uppercase tracking-[0.6px] text-[#8a8f91]">
                   Référence de commande
                 </dt>
-                <dd className="font-headline text-sm font-extrabold">En cours</dd>
+                <dd className="font-headline text-sm font-extrabold">
+                  {createdOrder?.reference ?? "En cours"}
+                </dd>
               </div>
               <div className="h-px bg-[#33383a]" />
               <div className="flex items-center justify-between">
@@ -247,7 +310,7 @@ export function PaymentProcessingView() {
                   Montant total
                 </dt>
                 <dd className="font-headline text-xl font-extrabold text-tdev-yellow">
-                  {formatMoney(cart.subtotal)}
+                  {formatMoney(createdOrder?.total ?? cart.subtotal)}
                 </dd>
               </div>
             </dl>

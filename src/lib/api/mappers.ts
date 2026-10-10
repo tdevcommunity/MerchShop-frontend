@@ -162,7 +162,12 @@ export function formatShippingAddress(
   if (!address) {
     return null;
   }
-  return `${address.line1}${address.line2 ? `, ${address.line2}` : ""}, ${address.city}, ${address.country}`;
+  if (!address.line1 && address.line2?.trim()) {
+    return address.line2.trim();
+  }
+  const street = [address.line1, address.line2].filter(Boolean).join(", ");
+  const rest = [address.city, address.country].filter(Boolean).join(", ");
+  return [street, rest].filter(Boolean).join(", ") || null;
 }
 
 /**

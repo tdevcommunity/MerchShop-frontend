@@ -8,10 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { awaitPaymentOutcome } from "@/features/payment/services/payment-flow";
 import {
+  clearCartBackup,
   clearPendingPayment,
   isPendingPaymentStale,
   readPendingPayment,
+  restoreCart,
 } from "@/features/payment/store/pending-payment";
+import { cartStore } from "@/features/cart/store/cart-store";
 import { getOrderGuestToken } from "@/lib/api/order-token";
 
 type State =
@@ -85,6 +88,7 @@ export function PaymentReturnView() {
 
         if (outcome.state === "paid") {
           clearPendingPayment();
+          clearCartBackup();
           router.replace(
             `/checkout/confirmation?orderId=${encodeURIComponent(outcome.order.id)}`,
           );
@@ -93,6 +97,15 @@ export function PaymentReturnView() {
 
         if (outcome.state === "failed") {
           clearPendingPayment();
+          /*
+           * Restauration du panier en cas d'échec pour permettre à l'utilisateur de réessayer.
+           */
+          const backedUpCart = restoreCart();
+          if (backedUpCart) {
+            backedUpCart.forEach((item) => {
+              cartStore.addItem(item);
+            });
+          }
           setState({
             phase: "failed",
             orderId: pending.orderId,

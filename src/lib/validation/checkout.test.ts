@@ -49,12 +49,12 @@ describe("checkout validation", () => {
     expect(fields.email).toBeUndefined();
   });
 
-  it("n'exige pas le téléphone aux coordonnées", () => {
+  it("exige le téléphone aux coordonnées", () => {
     const fields = validateCustomer({
       ...validCustomer,
       phone: "",
     });
-    expect(fields.phone).toBeUndefined();
+    expect(fields.phone).toBeTruthy();
   });
 
   it("exige un mode de réception", () => {
@@ -135,7 +135,7 @@ describe("checkout validation", () => {
     expect(fields.mobileOperator).toBeTruthy();
   });
 
-  it("n'exige pas le téléphone pour une carte", () => {
+  it("exige le téléphone pour une carte également", () => {
     const fields = validatePayment(
       draft({
         paymentMethod: "card",
@@ -143,7 +143,7 @@ describe("checkout validation", () => {
         customer: { ...validCustomer, phone: "" },
       }),
     );
-    expect(fields.phone).toBeUndefined();
+    expect(fields.phone).toBeTruthy();
   });
 
   it("accepte un draft retrait Jour J complet", () => {

@@ -154,7 +154,7 @@ export function PaymentForm() {
       >
         <CheckoutStepIntro
           eyebrow="Étape 3 — Paiement"
-          index="02"
+          index="03"
           title="Comment tu paies ?"
         >
           Choisis un moyen. Le reglement se fait ensuite chez FedaPay : aucune

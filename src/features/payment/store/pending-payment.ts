@@ -1,4 +1,7 @@
+import type { CartItem } from "@/types/cart";
+
 const PENDING_KEY = "tdev-merch-pending-payment";
+const CART_BACKUP_KEY = "tdev-merch-cart-backup";
 
 export type PendingPayment = {
   orderId: string;
@@ -72,4 +75,52 @@ export function isPendingPaymentStale(
   maxAgeMs = 60 * 60 * 1000,
 ): boolean {
   return Date.now() - pending.startedAt > maxAgeMs;
+}
+
+/**
+ * Sauvegarde le panier avant de le vider pour le restaurer en cas d'échec.
+ */
+export function backupCart(items: CartItem[]): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.sessionStorage.setItem(CART_BACKUP_KEY, JSON.stringify(items));
+  } catch {
+    // stockage indisponible
+  }
+}
+
+/**
+ * Restaure le panier sauvegardé et nettoie la sauvegarde.
+ */
+export function restoreCart(): CartItem[] | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  try {
+    const raw = window.sessionStorage.getItem(CART_BACKUP_KEY);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw) as CartItem[];
+    window.sessionStorage.removeItem(CART_BACKUP_KEY);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Nettoie la sauvegarde du panier (après paiement réussi).
+ */
+export function clearCartBackup(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.sessionStorage.removeItem(CART_BACKUP_KEY);
+  } catch {
+    // stockage indisponible
+  }
 }

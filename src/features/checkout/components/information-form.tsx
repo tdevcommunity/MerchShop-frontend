@@ -40,7 +40,7 @@ export function InformationForm() {
         <Alert title="Mode de réception incomplet" tone="error">
           Choisis d&apos;abord comment tu reçois ta commande
           {draft.deliveryMethod === "delivery"
-            ? " et renseigne l’adresse de livraison."
+            ? " et renseigne l'adresse de livraison."
             : "."}
         </Alert>
       </CheckoutShell>
@@ -133,12 +133,28 @@ export function InformationForm() {
             label="Email (optionnel)"
             type="email"
             autoComplete="email"
-            hint="Pour t’envoyer le reçu. Tu peux passer cette étape."
+            hint="Pour t'envoyer le reçu. Tu peux passer cette étape."
             value={draft.customer.email}
             error={errors.email}
             onChange={(event) =>
               update({
                 customer: { ...draft.customer, email: event.target.value },
+              })
+            }
+          />
+          <Input
+            name="phone"
+            label="Numéro de téléphone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="+228 90 12 34 56"
+            hint="Pour l'accès à ta commande et les notifications de livraison."
+            value={draft.customer.phone}
+            error={errors.phone}
+            onChange={(event) =>
+              update({
+                customer: { ...draft.customer, phone: event.target.value },
               })
             }
           />

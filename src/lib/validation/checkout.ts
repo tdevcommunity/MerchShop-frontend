@@ -9,7 +9,7 @@ const PHONE_PATTERN = /^[0-9+\s().-]{8,20}$/;
 function phoneError(phone: string, required: boolean): string | undefined {
   const trimmed = phone.trim();
   if (!trimmed) {
-    return required ? "Le téléphone est requis pour Mobile Money." : undefined;
+    return required ? "Le téléphone est requis." : undefined;
   }
   if (!PHONE_PATTERN.test(trimmed)) {
     return "Le téléphone n'est pas valide.";
@@ -30,9 +30,9 @@ export function validateCustomer(customer: CustomerInfo): Record<string, string>
   if (email && !EMAIL_PATTERN.test(email)) {
     fields.email = "L'email n'est pas valide.";
   }
-  const optionalPhone = phoneError(customer.phone, false);
-  if (optionalPhone) {
-    fields.phone = optionalPhone;
+  const phone = phoneError(customer.phone, true);
+  if (phone) {
+    fields.phone = phone;
   }
 
   return fields;
@@ -94,10 +94,10 @@ export function validatePayment(draft: CheckoutDraft): Record<string, string> {
     if (!draft.mobileOperator) {
       fields.mobileOperator = "Choisis ton opérateur Mobile Money.";
     }
-    const phone = phoneError(draft.customer.phone, true);
-    if (phone) {
-      fields.phone = phone;
-    }
+  }
+  const phone = phoneError(draft.customer.phone, true);
+  if (phone) {
+    fields.phone = phone;
   }
   return fields;
 }
