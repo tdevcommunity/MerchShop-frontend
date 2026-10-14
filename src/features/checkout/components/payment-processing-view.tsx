@@ -270,13 +270,11 @@ export function PaymentProcessingView() {
               en cours
             </h1>
             <p className="mt-6 max-w-[448px] text-center text-sm leading-relaxed text-[#b5b5b5] lg:text-base">
-              Nous te redirigeons vers{" "}
-              <span className="font-bold text-tdev-white">Velto</span> pour
-              valider ton reglement de{" "}
+              Nous t&apos;ouvrons la page de paiement sécurisée pour régler{" "}
               <span className="font-bold text-tdev-orange">
                 {formatMoney(cart.subtotal)}
               </span>
-              . Tu seras ramene ici juste apres.
+              . Tu reviendras ici dès que tu auras terminé.
             </p>
 
             <div className="motion-processing-dots mt-8 flex items-center gap-2" aria-hidden="true">
@@ -306,7 +304,7 @@ export function PaymentProcessingView() {
                 </dt>
                 <dd className="flex items-center gap-1.5 text-xs font-bold text-tdev-yellow">
                   <span className="size-2 bg-tdev-yellow" />
-                  Ouverture de la page de reglement
+                  Ouverture de la page de paiement
                 </dd>
               </div>
               <div className="h-px bg-[#33383a]" />
@@ -321,13 +319,13 @@ export function PaymentProcessingView() {
             </dl>
 
             <p className="mt-6 flex w-full items-center justify-center gap-2.5 bg-tdev-orange px-4 py-3.5 text-center text-sm font-bold tracking-[0.35px] text-tdev-anthracite">
-              Ne ferme pas cette page : tu vas être redirigé chez Velto
+              Ne ferme pas cette page : la redirection démarre dans un instant
             </p>
 
             <div className="mt-6 flex w-full items-center justify-between gap-3">
               <p className="flex items-center gap-2 text-xs text-[#8a8f91]">
                 <ShieldIcon className="size-4 text-tdev-green" />
-                Reglement chez Velto, aucun numero de carte ici
+                Paiement sécurisé : aucune carte saisie sur cette page
               </p>
               <button
                 type="button"
@@ -345,7 +343,7 @@ export function PaymentProcessingView() {
         <p>© 2026 TDEV Festival • Boutique Officielle • Besoin d&apos;aide ? contact@tdev.tg</p>
         <p className="flex items-center gap-1.5 text-tdev-white">
           <span className="size-2 rounded-full bg-tdev-green" />
-          Serveurs de paiement opérationnels
+          Paiement sécurisé disponible
         </p>
       </footer>
     </div>

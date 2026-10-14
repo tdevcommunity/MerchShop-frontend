@@ -159,7 +159,7 @@ export function InformationForm() {
             label="Téléphone de contact"
             type="tel"
             autoComplete="tel"
-            hint="Numéro togolais (8 chiffres) pour te joindre. Le paiement Mobile Money se fait sur la page Velto, avec le numéro de ton choix."
+            hint="Numéro togolais (8 chiffres) pour te joindre. Le Mobile Money se règle à l'étape suivante, avec le numéro de ton choix."
             value={draft.customer.phone}
             error={errors.phone}
             onChange={(event) =>

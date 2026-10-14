@@ -12,7 +12,7 @@ export function OrderAwaitingPayment({ order }: OrderAwaitingPaymentProps) {
     <div className="mx-auto flex w-full max-w-lg flex-col gap-6 px-5 py-12">
       <Alert title="Paiement non confirmé" tone="info">
         La commande <strong>{order.reference}</strong> est enregistrée, mais
-        aucun règlement n&apos;a été confirmé par l&apos;opérateur. Tant que le
+        aucun règlement n&apos;a encore été confirmé. Tant que le
         paiement n&apos;est pas validé, ta merch n&apos;est pas réservée pour
         retrait.
       </Alert>

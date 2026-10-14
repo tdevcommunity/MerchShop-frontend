@@ -48,11 +48,11 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   PAYMENT_PROVIDER_NOT_CONFIGURED:
     "Le paiement n'est pas disponible pour le moment.",
   VELTO_LIVE_HTTPS_CALLBACK_REQUIRED:
-    "Paiement live : configure une URL de retour HTTPS (https://ton-shop/...) sur l'API. http://localhost ne fonctionne pas avec les clés live.",
+    "Le paiement est indisponible pour le moment. Réessaie dans un instant ou contacte-nous.",
   ORDER_ALREADY_PAID: "Cette commande est déjà payée.",
   ORDER_NOT_PAYABLE: "Cette commande ne peut plus être payée.",
   PICKUP_NOT_CONFIGURED:
-    "Le paiement est confirmé côté opérateur, mais le retrait au stand n'est pas configuré sur le serveur. Contacte l'équipe technique.",
+    "Ton paiement semble confirmé, mais l'accès au retrait n'est pas encore disponible. Écris-nous à contact@tdev.tg avec ta référence de commande.",
   OUT_OF_STOCK: "Un article n'est plus disponible en quantité suffisante.",
   INVALID_CUSTOMER_PHONE:
     "Ce numéro n'est pas valide pour Mobile Money. Utilise un mobile togolais de 8 chiffres commençant par 7 ou 9.",

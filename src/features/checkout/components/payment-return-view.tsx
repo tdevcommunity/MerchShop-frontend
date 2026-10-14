@@ -278,7 +278,7 @@ export function PaymentReturnView() {
           <div className="flex flex-col items-center gap-4">
             <Spinner label="Vérification de ton paiement" />
             <p className="text-center text-sm text-[#b5b5b5]">
-              Nous confirmons ton règlement auprès de Velto. Cela prend en
+              Nous vérifions que ton paiement est bien enregistré. Cela prend en
               général quelques secondes.
             </p>
           </div>
@@ -288,7 +288,7 @@ export function PaymentReturnView() {
           <div className="flex flex-col gap-4">
             <Alert title="Paiement en cours de confirmation" tone="info">
               {state.hint ??
-                "L'opérateur n'a pas encore confirmé le règlement. Ta commande est enregistrée et ne sera débitée qu'une seule fois : tu peux fermer cette page sans risque."}
+                "Nous n'avons pas encore reçu la confirmation de ton paiement. Ta commande est enregistrée et ne sera débitée qu'une seule fois : tu peux fermer cette page sans risque."}
             </Alert>
             <Button
               variant="primary"
@@ -302,8 +302,8 @@ export function PaymentReturnView() {
               Reprendre le paiement
             </Button>
             <p className="text-center text-xs text-[#8a8f91]">
-              La page de confirmation s&apos;affichera uniquement après validation
-              du paiement par l&apos;opérateur.
+              La page de confirmation s&apos;affichera dès que ton paiement sera
+              validé.
             </p>
           </div>
         )}
