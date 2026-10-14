@@ -55,6 +55,9 @@ export async function createCheckoutSession(
         quantity: item.quantity,
       })),
       customer_name: customerName,
+      ...(draft.customer.email.trim()
+        ? { customer_email: draft.customer.email.trim() }
+        : {}),
       customer_phone_number: draft.customer.phone.trim(),
       fulfillment_method:
         draft.deliveryMethod === "pickup_event" ? "pickup" : "delivery",

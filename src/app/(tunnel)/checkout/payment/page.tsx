@@ -1,4 +1,4 @@
-import { PaymentForm } from "@/features/checkout/components/payment-form";
+import { CheckoutPaymentRedirect } from "@/features/checkout/components/checkout-payment-redirect";
 import { createMetadata } from "@/lib/seo/create-metadata";
 
 export const metadata = createMetadata({
@@ -7,5 +7,5 @@ export const metadata = createMetadata({
 });
 
 export default function CheckoutPaymentPage() {
-  return <PaymentForm />;
+  return <CheckoutPaymentRedirect />;
 }
