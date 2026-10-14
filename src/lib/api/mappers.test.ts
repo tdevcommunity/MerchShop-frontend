@@ -56,10 +56,36 @@ describe("API Mappers", () => {
       productId: "prod-uuid-1",
       size: "M",
       color: "Noir",
+      colorHex: null,
+      imageUrl: null,
       sku: "TEE-M-BLK",
       stockQuantity: 15,
       unitPrice: 8000,
     });
+  });
+
+  it("conserve la photo et la teinte d'une variante couleur", () => {
+    const variant = mapLaravelVariantToProductVariant(
+      {
+        uuid: "var-noir",
+        sku: "TEE-M-BLK",
+        name: "M / Noir",
+        size: "M",
+        color: "Noir",
+        image_url: "https://res.cloudinary.com/demo/image/upload/noir.jpg",
+        color_hex: "#111111",
+        price: 8000,
+        stock: 4,
+        status: "active",
+        isAvailable: true,
+      },
+      "prod-uuid-1",
+    );
+
+    expect(variant.imageUrl).toBe(
+      "https://res.cloudinary.com/demo/image/upload/noir.jpg",
+    );
+    expect(variant.colorHex).toBe("#111111");
   });
 
   it("mappe un produit Laravel complet avec ses variantes", () => {

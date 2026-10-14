@@ -15,6 +15,10 @@ export type LaravelVariant = {
   name: string;
   size: string | null;
   color: string | null;
+  imageUrl?: string | null;
+  image_url?: string | null;
+  colorHex?: string | null;
+  color_hex?: string | null;
   price: number;
   stock: number;
   status: string;
