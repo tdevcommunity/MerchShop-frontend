@@ -37,7 +37,7 @@ export function AddToCartButton({
       size: variant.size,
       color: variant.color,
       unitPrice: variant.unitPrice,
-      imageUrl: product.imageUrl,
+      imageUrl: variant.imageUrl || product.imageUrl,
       quantity,
     });
     track(analyticsEvents.addToCart, {

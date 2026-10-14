@@ -48,6 +48,8 @@ export function mapLaravelVariantToProductVariant(
     productId,
     size: isTextileSize ? (variant.size as TextileSize) : null,
     color: variant.color,
+    colorHex: variant.colorHex ?? variant.color_hex ?? null,
+    imageUrl: variant.imageUrl ?? variant.image_url ?? null,
     sku: variant.sku,
     stockQuantity: raw.stock ?? 0,
     unitPrice: raw.price ?? 0,
