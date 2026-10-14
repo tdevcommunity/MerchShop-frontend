@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { CheckoutFooterBar } from "@/features/checkout/components/checkout-footer-bar";
@@ -15,6 +15,10 @@ import {
   useCheckoutDraftActions,
 } from "@/features/checkout/hooks/use-checkout-draft";
 import { deliveryLabel } from "@/features/checkout/utils";
+import { checkoutDraftStore } from "@/features/checkout/store/checkout-draft-store";
+import { beginVeltoCheckoutPipeline } from "@/features/checkout/utils/checkout-processing-session";
+import { commitCheckoutDraftForPayment } from "@/features/checkout/utils/prepare-velto-payment";
+import { fetchCsrfToken } from "@/lib/api/client";
 import { validateFulfillment, validateInformation } from "@/lib/validation/checkout";
 
 export function InformationForm() {
@@ -23,6 +27,10 @@ export function InformationForm() {
   const { update } = useCheckoutDraftActions();
   const router = useRouter();
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    void fetchCsrfToken();
+  }, []);
 
   if (cart.items.length === 0) {
     return <EmptyCheckout />;
@@ -49,12 +57,16 @@ export function InformationForm() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const nextErrors = validateInformation(draft);
+    checkoutDraftStore.hydrate();
+    const snapshot = checkoutDraftStore.getSnapshot();
+    const nextErrors = validateInformation(snapshot);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       return;
     }
-    router.push("/checkout/payment");
+    const readyDraft = commitCheckoutDraftForPayment(snapshot);
+    beginVeltoCheckoutPipeline(readyDraft, cart.items);
+    router.push("/checkout/processing");
   }
 
   return (
@@ -139,6 +151,20 @@ export function InformationForm() {
             onChange={(event) =>
               update({
                 customer: { ...draft.customer, email: event.target.value },
+              })
+            }
+          />
+          <Input
+            name="phone"
+            label="Téléphone de contact"
+            type="tel"
+            autoComplete="tel"
+            hint="Numéro togolais (8 chiffres) pour te joindre. Le paiement Mobile Money se fait sur la page Velto, avec le numéro de ton choix."
+            value={draft.customer.phone}
+            error={errors.phone}
+            onChange={(event) =>
+              update({
+                customer: { ...draft.customer, phone: event.target.value },
               })
             }
           />

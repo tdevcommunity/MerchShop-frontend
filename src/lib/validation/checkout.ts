@@ -4,15 +4,43 @@ import type { ShippingAddress } from "@/types/delivery";
 import { ValidationError } from "@/lib/api/errors";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_PATTERN = /^[0-9+\s().-]{8,20}$/;
+const TOGO_COUNTRY = "228";
+const TOGO_NATIONAL_LENGTH = 8;
+const TOGO_INTERNATIONAL_PREFIX = "00";
+
+/** Aligné sur la règle Laravel `PhoneNumber` (Togo, 8 chiffres). */
+export function normaliseTogoPhone(value: string): string | null {
+  let digits = value.replace(/\D+/g, "");
+  if (digits.startsWith(TOGO_INTERNATIONAL_PREFIX)) {
+    digits = digits.slice(TOGO_INTERNATIONAL_PREFIX.length);
+  }
+  if (
+    digits.length > TOGO_NATIONAL_LENGTH &&
+    digits.startsWith(TOGO_COUNTRY)
+  ) {
+    digits = digits.slice(TOGO_COUNTRY.length);
+  }
+  if (digits.length !== TOGO_NATIONAL_LENGTH) {
+    return null;
+  }
+  if (new Set(digits.split("")).size === 1) {
+    return null;
+  }
+  return digits;
+}
+
+const PHONE_INVALID_TOGO =
+  "Ce numéro n’est pas un numéro togolais valide (8 chiffres, ex. 90123456, 64000061 ou +22890123456).";
 
 function phoneError(phone: string, required: boolean): string | undefined {
   const trimmed = phone.trim();
   if (!trimmed) {
-    return required ? "Le téléphone est requis pour Mobile Money." : undefined;
+    return required
+      ? "Le téléphone est requis pour te joindre concernant ta commande."
+      : undefined;
   }
-  if (!PHONE_PATTERN.test(trimmed)) {
-    return "Le téléphone n'est pas valide.";
+  if (normaliseTogoPhone(trimmed) === null) {
+    return PHONE_INVALID_TOGO;
   }
   return undefined;
 }
@@ -30,9 +58,9 @@ export function validateCustomer(customer: CustomerInfo): Record<string, string>
   if (email && !EMAIL_PATTERN.test(email)) {
     fields.email = "L'email n'est pas valide.";
   }
-  const optionalPhone = phoneError(customer.phone, false);
-  if (optionalPhone) {
-    fields.phone = optionalPhone;
+  const phone = phoneError(customer.phone, true);
+  if (phone) {
+    fields.phone = phone;
   }
 
   return fields;
@@ -88,16 +116,6 @@ export function validatePayment(draft: CheckoutDraft): Record<string, string> {
   const fields: Record<string, string> = {};
   if (!draft.paymentMethod) {
     fields.paymentMethod = "Choisis un moyen de paiement.";
-    return fields;
-  }
-  if (draft.paymentMethod === "mobile_money") {
-    if (!draft.mobileOperator) {
-      fields.mobileOperator = "Choisis ton opérateur Mobile Money.";
-    }
-    const phone = phoneError(draft.customer.phone, true);
-    if (phone) {
-      fields.phone = phone;
-    }
   }
   return fields;
 }
@@ -112,4 +130,35 @@ export function validateCheckoutDraft(draft: CheckoutDraft): void {
   if (Object.keys(fields).length > 0) {
     throw new ValidationError(fields);
   }
+}
+
+export function firstCheckoutValidationMessage(
+  fields: Record<string, string>,
+): string {
+  const message = Object.values(fields).find(
+    (value) => typeof value === "string" && value.trim() !== "",
+  );
+  return message ?? "Certaines informations sont incomplètes.";
+}
+
+export function checkoutPathForValidationFields(
+  fields: Record<string, string>,
+): "/checkout/fulfillment" | "/checkout/information" {
+  const keys = Object.keys(fields);
+  if (
+    keys.some((key) =>
+      [
+        "deliveryMethod",
+        "shipping",
+        "country",
+        "city",
+        "line1",
+        "fulfillment_method",
+        "shipping_address",
+      ].includes(key),
+    )
+  ) {
+    return "/checkout/fulfillment";
+  }
+  return "/checkout/information";
 }

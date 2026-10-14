@@ -20,6 +20,8 @@ export const apiEndpoints = {
    * meme adresse de paiement sans ouvrir une seconde transaction.
    */
   payOrder: (uuid: string) => `/api/v1/orders/${encodeURIComponent(uuid)}/payment`,
+  syncPaymentReturn: (uuid: string) =>
+    `/api/v1/orders/${encodeURIComponent(uuid)}/payment/sync-return`,
   cancelOrder: (uuid: string) =>
     `/api/v1/orders/${encodeURIComponent(uuid)}/cancel`,
   markOrderReady: (uuid: string) =>

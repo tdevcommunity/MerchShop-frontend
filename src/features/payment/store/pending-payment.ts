@@ -7,7 +7,7 @@ export type PendingPayment = {
 };
 
 /**
- * Commande en cours de reglement chez FedaPay.
+ * Commande en cours de reglement chez Velto.
  *
  * Le retour de l'operateur est configure cote backend et ne peut donc pas
  * porter l'identifiant de la commande : l'adresse de retour est une seule et
@@ -20,9 +20,9 @@ export type PendingPayment = {
  */
 export function rememberPendingPayment(
   orderId: string,
-  checkoutUrl: string,
+  checkoutUrl = "",
 ): void {
-  if (typeof window === "undefined" || !orderId || !checkoutUrl) {
+  if (typeof window === "undefined" || !orderId) {
     return;
   }
   const pending: PendingPayment = { orderId, checkoutUrl, startedAt: Date.now() };
@@ -63,7 +63,7 @@ export function clearPendingPayment(): void {
 /**
  * La commande en attente est-elle encore plausible ?
  *
- * FedaPay peut mettre plusieurs minutes a valider un paiement. Au-dela d'une
+ * Velto peut mettre plusieurs minutes a valider un paiement. Au-dela d'une
  * heure, ce que l'on rapporterait ne decrirait plus la tentative en cours et
  * afficherait un etat trompeur : on rend alors la main a l'acheteur.
  */

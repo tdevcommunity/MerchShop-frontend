@@ -5,6 +5,15 @@ const nextConfig: NextConfig = {
   output: "standalone",
   agentRules: false,
   allowedDevOrigins: ["127.0.0.1"],
+  async redirects() {
+    return [
+      {
+        source: "/checkout",
+        destination: "/checkout/fulfillment",
+        permanent: false,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

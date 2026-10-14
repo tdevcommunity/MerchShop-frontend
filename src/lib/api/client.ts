@@ -3,6 +3,7 @@ import {
   ApiError,
   NetworkError,
   NotFoundError,
+  userMessageForApiError,
   ValidationError,
 } from "@/lib/api/errors";
 import { apiEndpoints } from "@/lib/api/endpoints";
@@ -82,13 +83,10 @@ async function handleResponseError(response: Response): Promise<never> {
     // The API may return an empty or non-JSON error response.
   }
 
-  const message =
-    errorData?.error?.message ||
-    errorData?.message ||
-    `La requête a échoué (${response.status}).`;
   const code =
     errorData?.error?.code ||
     (response.status === 404 ? "not_found" : "api");
+  const userMessage = userMessageForApiError(response.status, code);
 
   if (response.status === 422) {
     const rawFields = errorData?.error?.details?.fields || errorData?.errors;
@@ -98,12 +96,12 @@ async function handleResponseError(response: Response): Promise<never> {
         fields[key] = Array.isArray(value) ? value.join(" ") : String(value);
       }
     }
-    throw new ValidationError(fields, message);
+    throw new ValidationError(fields, userMessage);
   }
   if (response.status === 404) {
-    throw new NotFoundError(message);
+    throw new NotFoundError(userMessage);
   }
-  throw new ApiError(response.status, message, code);
+  throw new ApiError(response.status, userMessage, code);
 }
 
 export async function apiRequestRaw(
@@ -112,7 +110,11 @@ export async function apiRequestRaw(
   isRetry = false,
 ): Promise<Response> {
   if (!env.apiBaseUrl) {
-    throw new ApiError(503, "L'API backend n'est pas configurée.", "api_unconfigured");
+    throw new ApiError(
+      503,
+      userMessageForApiError(503, "api_unconfigured"),
+      "api_unconfigured",
+    );
   }
 
   const { body, headers, orderToken, skipCsrf, method = "GET", ...rest } = options;

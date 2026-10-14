@@ -1,10 +1,14 @@
 import { getOrderById } from "@/features/order/services/order-service";
+import {
+  isOrderPaid,
+  isOrderPaymentFailed,
+} from "@/features/order/utils/order-payment-state";
 import type { Order } from "@/types/order";
 
 /**
  * Attend qu'une commande sorte de l'etat « en attente de reglement ».
  *
- * Le reglement n'est etabli que par le webhook FedaPay, donc par une notification
+ * Le reglement n'est etabli que par le webhook Velto, donc par une notification
  * que le navigateur ne declenche pas : l'ordre retourne est une observation, pas
  * une preuve. Ce qui est observe ici sert uniquement a rediriger vers la bonne
  * page — la page de confirmation, elle, ne doit rien afficher sans paiement.
@@ -13,51 +17,36 @@ import type { Order } from "@/types/order";
  * courant, et un rythme constant martelerait l'API pendant tout le reste.
  */
 const INTERVALS_MS = [1200, 1500, 2000, 2500, 3000, 4000] as const;
+const FAST_INTERVALS_MS = [250, 350, 500, 700, 900, 1200] as const;
 
 export type PaymentOutcome =
   | { state: "paid"; order: Order }
   | { state: "failed"; order: Order }
   | { state: "pending"; order: Order };
 
-function isPaid(order: Order): boolean {
-  return (
-    order.paymentStatus === "success" ||
-    order.status === "paid" ||
-    order.status === "ready_for_pickup" ||
-    order.status === "picked_up"
-  );
-}
-
-function isFailed(order: Order): boolean {
-  return (
-    order.status === "cancelled" ||
-    order.status === "refunded" ||
-    order.status === "refund_pending" ||
-    order.paymentStatus === "failed"
-  );
-}
-
 export async function awaitPaymentOutcome(
   orderId: string,
   maxWaitMs = 60000,
+  options?: { fast?: boolean },
 ): Promise<PaymentOutcome> {
   const startTime = Date.now();
   let attempt = 0;
   let lastOrder: Order | null = null;
+  const intervals = options?.fast ? FAST_INTERVALS_MS : INTERVALS_MS;
 
   while (Date.now() - startTime < maxWaitMs) {
     const order = await getOrderById(orderId);
     lastOrder = order;
 
-    if (isPaid(order)) {
+    if (isOrderPaid(order)) {
       return { state: "paid", order };
     }
-    if (isFailed(order)) {
+    if (isOrderPaymentFailed(order)) {
       return { state: "failed", order };
     }
 
     const interval =
-      INTERVALS_MS[Math.min(attempt, INTERVALS_MS.length - 1)] ?? 4000;
+      intervals[Math.min(attempt, intervals.length - 1)] ?? 4000;
     attempt += 1;
     await new Promise((resolve) => setTimeout(resolve, interval));
   }
