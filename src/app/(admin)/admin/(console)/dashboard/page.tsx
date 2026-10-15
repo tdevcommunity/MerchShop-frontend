@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/features/admin/components/page-header";
 import { formatAdminDate } from "@/features/admin/labels";
@@ -42,6 +42,11 @@ function rangeForPreset(preset: Exclude<Preset, "custom">) {
   return { from: shiftDays(-29), to };
 }
 
+// Detection de l'hydratation cote navigateur sans setState dans un effet.
+const subscribeNoop = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function AdminDashboardPage() {
   const [preset, setPreset] = useState<Preset>("7d");
   const [from, setFrom] = useState(() => rangeForPreset("7d").from);
@@ -52,8 +57,11 @@ export default function AdminDashboardPage() {
   // Les dates par defaut dependent du fuseau : le serveur (UTC) et le
   // navigateur peuvent tomber sur deux jours differents (erreur React #418).
   // On ne les affiche donc qu'une fois la page montee cote navigateur.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(
+    subscribeNoop,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
 
   const query = useMemo(() => {
     const params = new URLSearchParams({ from, to });
