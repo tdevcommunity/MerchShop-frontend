@@ -11,12 +11,14 @@ import {
   PRODUCT_COLOR_OPTIONS,
 } from "@/features/catalog/utils";
 import { cn } from "@/lib/utils/cn";
+import {
+  ACCEPTED_IMAGE_ACCEPT,
+  ACCEPTED_IMAGE_FORMATS_LABEL,
+  prepareImageForUpload,
+  readFileAsDataUrl,
+} from "@/lib/images/prepare-image";
 import { TEXTILE_SIZES } from "@/types/catalog";
 import type { AdminCategory, AdminProduct, AdminVariant, ProductStatus } from "@/types/admin";
-
-/** Aligné sur `max:20480` (Ko) côté API Laravel / PHP 20M. */
-const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
-const MAX_IMAGE_MESSAGE = "L’image ne doit pas dépasser 20 Mo.";
 
 type VariantDraft = {
   id?: string;
@@ -48,7 +50,7 @@ function ImageFilePicker({ label, onFile, className }: ImageFilePickerProps) {
       <input
         id={id}
         type="file"
-        accept="image/*"
+        accept={ACCEPTED_IMAGE_ACCEPT}
         className="sr-only"
         onChange={(event) => {
           const file = event.target.files?.[0];
@@ -101,21 +103,6 @@ function initialColorImages(product?: AdminProduct): Record<string, string> {
     }
   }
   return map;
-}
-
-function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-      } else {
-        reject(new Error("Lecture image impossible."));
-      }
-    };
-    reader.onerror = () => reject(new Error("Lecture image impossible."));
-    reader.readAsDataURL(file);
-  });
 }
 
 export function ProductForm({ categories, product }: ProductFormProps) {
@@ -177,14 +164,21 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const generatedSlug = slugify(name);
 
   async function onProductFile(file: File) {
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError(MAX_IMAGE_MESSAGE);
-      return;
-    }
     setError(null);
-    const dataUrl = await readAsDataUrl(file);
-    setImageFile(file);
-    setImages((current) => [...current, dataUrl]);
+    try {
+      // La validation et la reduction se font avant tout etat : une image
+      // refusee ne doit pas laisser une vignette orpheline dans la liste.
+      const prepared = await prepareImageForUpload(file);
+      const dataUrl = await readFileAsDataUrl(prepared);
+      setImageFile(prepared);
+      setImages((current) => [...current, dataUrl]);
+    } catch (fileError) {
+      setError(
+        fileError instanceof Error
+          ? fileError.message
+          : "Cette image ne peut pas être utilisée.",
+      );
+    }
   }
 
   function setColorImage(color: string, src: string) {
@@ -215,18 +209,23 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   }
 
   async function onColorFile(color: string, file: File) {
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError(MAX_IMAGE_MESSAGE);
-      return;
-    }
     setError(null);
-    const dataUrl = await readAsDataUrl(file);
-    setColorImage(color, dataUrl);
-    setColorFiles((current) => {
-      const next = new Map(current);
-      next.set(color, file);
-      return next;
-    });
+    try {
+      const prepared = await prepareImageForUpload(file);
+      const dataUrl = await readFileAsDataUrl(prepared);
+      setColorImage(color, dataUrl);
+      setColorFiles((current) => {
+        const next = new Map(current);
+        next.set(color, prepared);
+        return next;
+      });
+    } catch (fileError) {
+      setError(
+        fileError instanceof Error
+          ? fileError.message
+          : "Cette image ne peut pas être utilisée.",
+      );
+    }
   }
 
   function applyColorToVariant(
@@ -438,8 +437,9 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           onFile={(file) => void onProductFile(file)}
         />
         <p className="mt-2 text-xs text-tdev-muted">
-          L&apos;image est prévisualisée immédiatement puis envoyée au serveur pour son
-          téléversement sécurisé vers Cloudinary.
+          Formats acceptés : {ACCEPTED_IMAGE_FORMATS_LABEL}. Les photos trop lourdes ou trop
+          grandes sont automatiquement réduites avant l&apos;envoi, puis téléversées vers
+          Cloudinary.
         </p>
       </section>
 

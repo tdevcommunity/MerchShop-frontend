@@ -78,17 +78,24 @@ export function OrderDetailModal({
     }
   }
 
-  const nextStatuses = data ? ORDER_TRANSITIONS[data.order.status] : [];
+  /*
+   * On derive `order` et `qr` de `data` une fois : les garder imbriques oblige
+   * a repeter `data.order.` partout, et le jour ou une reponse arrive sans sa
+   * cle `order`, c'est en plein rendu que ca casse au lieu d'ici.
+   */
+  const order = data?.order ?? null;
+  const qr = data?.qr ?? null;
+  const nextStatuses = order ? (ORDER_TRANSITIONS[order.status] ?? []) : [];
 
   return (
     <AdminModal
       open={Boolean(orderId)}
-      title={data?.order.reference ?? "Commande"}
+      title={order?.reference ?? "Commande"}
       description="Le frontend affiche le QR. La signature reste côté backend / Scan 3B."
       onClose={onClose}
     >
       <AdminState loading={Boolean(orderId) && !data && !error} error={error} />
-      {data ? (
+      {order ? (
         <div className="grid gap-4 lg:grid-cols-2">
           <section className="border border-tdev-anthracite bg-tdev-white p-4">
             <h3 className="font-headline text-sm font-extrabold uppercase">Client</h3>
@@ -96,26 +103,26 @@ export function OrderDetailModal({
               <div className="flex justify-between gap-4">
                 <dt className="text-tdev-muted">Nom</dt>
                 <dd>
-                  {data.order.customer.firstName} {data.order.customer.lastName}
+                  {order.customer.firstName} {order.customer.lastName}
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-tdev-muted">Téléphone</dt>
-                <dd>{data.order.customer.phone}</dd>
+                <dd>{order.customer.phone}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-tdev-muted">Email</dt>
-                <dd>{data.order.customer.email || "—"}</dd>
+                <dd>{order.customer.email || "—"}</dd>
               </div>
             </dl>
           </section>
           <section className="border border-tdev-anthracite bg-tdev-white p-4">
             <h3 className="font-headline text-sm font-extrabold uppercase">Commande</h3>
             <p className="mt-2 text-sm text-tdev-muted">
-              {data.order.id} · {formatAdminDate(data.order.createdAt, 16).replace("T", " ")}
+              {order.id} · {formatAdminDate(order.createdAt, 16).replace("T", " ")}
             </p>
             <ul className="mt-3 divide-y divide-tdev-border text-sm">
-              {data.order.items.map((item) => (
+              {order.items.map((item) => (
                 <li key={`${item.variantId}-${item.productId}`} className="flex justify-between py-2">
                   <span>
                     {item.productName} · {item.variantLabel} × {item.quantity}
@@ -125,7 +132,7 @@ export function OrderDetailModal({
               ))}
             </ul>
             <p className="mt-3 font-headline text-xl font-extrabold">
-              Total {formatMoney(data.order.total)}
+              Total {formatMoney(order.total)}
             </p>
           </section>
           <section className="border border-tdev-anthracite bg-tdev-white p-4">
@@ -134,55 +141,55 @@ export function OrderDetailModal({
               <div className="flex justify-between">
                 <dt className="text-tdev-muted">Méthode</dt>
                 <dd>
-                  {data.order.paymentMethod
-                    ? PAYMENT_METHOD_LABELS[data.order.paymentMethod] ?? data.order.paymentMethod
+                  {order.paymentMethod
+                    ? PAYMENT_METHOD_LABELS[order.paymentMethod] ?? order.paymentMethod
                     : "—"}
                 </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-tdev-muted">Statut</dt>
                 <dd>
-                  <StatusBadge value={data.order.paymentStatus} />
+                  <StatusBadge value={order.paymentStatus} />
                 </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-tdev-muted">Montant</dt>
-                <dd>{formatMoney(data.order.total)}</dd>
+                <dd>{formatMoney(order.total)}</dd>
               </div>
             </dl>
           </section>
           <section className="border border-tdev-anthracite bg-tdev-white p-4">
             <h3 className="font-headline text-sm font-extrabold uppercase">Livraison / retrait</h3>
             <p className="mt-3 text-sm">
-              {DELIVERY_LABELS[data.order.deliveryMethod] ?? data.order.deliveryMethod}
+              {DELIVERY_LABELS[order.deliveryMethod] ?? order.deliveryMethod}
             </p>
-            <p className="mt-1 text-sm text-tdev-muted">{data.order.pickupLabel ?? "—"}</p>
-            {data.order.shippingAddress ? (
+            <p className="mt-1 text-sm text-tdev-muted">{order.pickupLabel ?? "—"}</p>
+            {order.shippingAddress ? (
               <p className="mt-2 text-sm">
-                {data.order.shippingAddress.line1}, {data.order.shippingAddress.city}
+                {order.shippingAddress.line1}, {order.shippingAddress.city}
               </p>
             ) : null}
             <p className="mt-3">
-              <StatusBadge value={data.order.status} />
+              <StatusBadge value={order.status} />
             </p>
-            {data.order.pickupAgentEmail ? (
+            {order.pickupAgentEmail ? (
               <p className="mt-2 text-xs text-tdev-muted">
-                Retiré par {data.order.pickupAgentEmail} le{" "}
-                {formatAdminDate(data.order.pickupValidatedAt, 16).replace("T", " ")}
+                Retiré par {order.pickupAgentEmail} le{" "}
+                {formatAdminDate(order.pickupValidatedAt, 16).replace("T", " ")}
               </p>
             ) : null}
           </section>
           <section className="border border-tdev-anthracite bg-tdev-white p-4">
             <h3 className="font-headline text-sm font-extrabold uppercase">QR de retrait</h3>
-            {data.qr ? (
+            {qr ? (
               <div className="mt-3">
-                <StatusBadge value={data.qr.status} />
-                {data.qr.imageUrl ? (
+                <StatusBadge value={qr.status} />
+                {qr.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={data.qr.imageUrl} alt={data.qr.alt} className="mt-3 size-40 border" />
+                  <img src={qr.imageUrl} alt={qr.alt} className="mt-3 size-40 border" />
                 ) : (
                   <p className="mt-3 text-sm text-tdev-muted">
-                    QR généré côté backend pour {data.order.reference}. Affichage uniquement.
+                    QR généré côté backend pour {order.reference}. Affichage uniquement.
                   </p>
                 )}
               </div>
