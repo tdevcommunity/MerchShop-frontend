@@ -18,8 +18,10 @@ import { MerchPassCard } from "@/features/order/components/merch-pass-card";
 import { OfficialReceiptCard } from "@/features/order/components/official-receipt-card";
 import { PostPurchaseHeader } from "@/features/order/components/post-purchase-header";
 import { TunnelHeader } from "@/features/order/components/tunnel-header";
+import { OrderAwaitingPayment } from "@/features/order/components/order-awaiting-payment";
 import { useOrder } from "@/features/order/hooks/use-order";
 import { usePickupQr } from "@/features/order/hooks/use-pickup-qr";
+import { isOrderPaid } from "@/features/order/utils/order-payment-state";
 import { formatMoney } from "@/lib/utils/format-money";
 
 type OrderConfirmationProps = {
@@ -31,7 +33,7 @@ export function OrderConfirmation({ orderId }: OrderConfirmationProps) {
   const { qr, qrError } = usePickupQr(orderId);
 
   useEffect(() => {
-    if (order) {
+    if (order && isOrderPaid(order)) {
       track(analyticsEvents.orderCompleted, { orderId: order.id });
     }
   }, [order]);
@@ -57,12 +59,32 @@ export function OrderConfirmation({ orderId }: OrderConfirmationProps) {
     return (
       <ErrorState
         title="Impossible de charger la commande"
-        description={error ?? "Erreur inconnue."}
+        description="Impossible d'afficher ta commande pour le moment. Réessaie dans un instant."
       />
     );
   }
 
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const paid = isOrderPaid(order);
+
+  if (!paid) {
+    return (
+      <div className="flex min-h-dvh flex-col bg-tdev-white lg:bg-tdev-anthracite">
+        <div className="lg:hidden">
+          <TunnelHeader
+            backHref="/"
+            backLabel="Retour à la boutique"
+            title="Commande"
+            titleAs="p"
+          />
+        </div>
+        <div className="hidden lg:block">
+          <PostPurchaseHeader paymentConfirmed={false} />
+        </div>
+        <OrderAwaitingPayment order={order} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-dvh flex-col bg-tdev-white lg:bg-tdev-anthracite">
@@ -75,7 +97,7 @@ export function OrderConfirmation({ orderId }: OrderConfirmationProps) {
         />
       </div>
       <div className="hidden lg:block">
-        <PostPurchaseHeader />
+        <PostPurchaseHeader paymentConfirmed />
       </div>
 
       <div className="bg-tdev-blue text-tdev-white">

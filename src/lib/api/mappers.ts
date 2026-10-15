@@ -168,7 +168,7 @@ export function formatShippingAddress(
 }
 
 /**
- * Mappe une tentative de paiement FedaPay vers le modele de domaine.
+ * Mappe une tentative de paiement Velto vers le modele de domaine.
  *
  * `checkoutUrl` n'est pas porte par `Payment` : c'est une adresse de passage,
  * pas un etat. Elle se lit une fois, au moment ou l'on redirige le navigateur

@@ -3,10 +3,12 @@ import { BrandMark } from "@/components/layout/brand-mark";
 
 type PostPurchaseHeaderProps = {
   shopHref?: string;
+  paymentConfirmed?: boolean;
 };
 
 export function PostPurchaseHeader({
   shopHref = "/",
+  paymentConfirmed = true,
 }: PostPurchaseHeaderProps) {
   return (
     <header className="flex h-14 items-center justify-between border-b border-[#33383a] bg-tdev-anthracite px-5 lg:h-[72px] lg:px-12">
@@ -18,8 +20,14 @@ export function PostPurchaseHeader({
         <span className="text-xs uppercase tracking-[1.2px] text-[#8a8f91]">
           Statut :
         </span>
-        <span className="bg-tdev-green px-3 py-1 font-headline text-xs font-extrabold uppercase tracking-[0.3px] text-tdev-white">
-          Paiement confirmé
+        <span
+          className={
+            paymentConfirmed
+              ? "bg-tdev-green px-3 py-1 font-headline text-xs font-extrabold uppercase tracking-[0.3px] text-tdev-white"
+              : "bg-tdev-yellow px-3 py-1 font-headline text-xs font-extrabold uppercase tracking-[0.3px] text-tdev-anthracite"
+          }
+        >
+          {paymentConfirmed ? "Paiement confirmé" : "En attente de paiement"}
         </span>
       </p>
       <Link

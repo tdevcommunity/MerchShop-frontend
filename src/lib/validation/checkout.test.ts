@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "@/lib/api/errors";
 import {
+  normaliseTogoPhone,
   validateCheckoutDraft,
   validateCustomer,
   validateFulfillment,
@@ -49,12 +50,12 @@ describe("checkout validation", () => {
     expect(fields.email).toBeUndefined();
   });
 
-  it("n'exige pas le téléphone aux coordonnées", () => {
+  it("exige le téléphone aux coordonnées", () => {
     const fields = validateCustomer({
       ...validCustomer,
       phone: "",
     });
-    expect(fields.phone).toBeUndefined();
+    expect(fields.phone).toBeTruthy();
   });
 
   it("exige un mode de réception", () => {
@@ -123,26 +124,25 @@ describe("checkout validation", () => {
     expect(fields.paymentMethod).toBeTruthy();
   });
 
-  it("exige téléphone et opérateur pour Mobile Money", () => {
-    const fields = validatePayment(
+  it("exige le téléphone aux coordonnées", () => {
+    const fields = validateInformation(
       draft({
-        paymentMethod: "mobile_money",
-        mobileOperator: null,
         customer: { ...validCustomer, phone: "" },
       }),
     );
     expect(fields.phone).toBeTruthy();
-    expect(fields.mobileOperator).toBeTruthy();
   });
 
-  it("n'exige pas le téléphone pour une carte", () => {
-    const fields = validatePayment(
-      draft({
-        paymentMethod: "card",
-        mobileOperator: null,
-        customer: { ...validCustomer, phone: "" },
-      }),
-    );
+  it("normalise un numéro togolais", () => {
+    expect(normaliseTogoPhone("+228 90 12 34 56")).toBe("90123456");
+    expect(normaliseTogoPhone("11111111")).toBeNull();
+  });
+
+  it("accepte un numéro togolais de contact (préfixe 6)", () => {
+    const fields = validateCustomer({
+      ...validCustomer,
+      phone: "64000061",
+    });
     expect(fields.phone).toBeUndefined();
   });
 

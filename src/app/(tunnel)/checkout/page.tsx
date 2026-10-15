@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { CheckoutIndexRedirect } from "@/features/checkout/components/checkout-index-redirect";
 import { createMetadata } from "@/lib/seo/create-metadata";
 
 export const metadata = createMetadata({
@@ -7,5 +7,5 @@ export const metadata = createMetadata({
 });
 
 export default function CheckoutIndexPage() {
-  redirect("/checkout/fulfillment");
+  return <CheckoutIndexRedirect />;
 }

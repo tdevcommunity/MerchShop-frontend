@@ -4,7 +4,9 @@ import {
   NetworkError,
   isNotFoundError,
   toUserMessage,
+  userMessageForApiError,
   NotFoundError,
+  ValidationError,
 } from "./errors";
 
 describe("api errors", () => {
@@ -13,6 +15,22 @@ describe("api errors", () => {
     expect(toUserMessage(new Error("stack leak"))).toBe(
       "Une erreur inattendue s'est produite.",
     );
+  });
+
+  it("masque les messages techniques de l'API", () => {
+    expect(
+      toUserMessage(
+        new ApiError(502, "PAYMENT_PROVIDER_UNAVAILABLE detail", "PAYMENT_PROVIDER_UNAVAILABLE"),
+      ),
+    ).toMatch(/indisponible/i);
+    expect(userMessageForApiError(502, "UNKNOWN_CODE")).toMatch(/indisponible/i);
+    expect(userMessageForApiError(404, "NOT_FOUND")).toMatch(/introuvable/i);
+  });
+
+  it("garde un message générique pour la validation", () => {
+    expect(
+      toUserMessage(new ValidationError({ email: "Email invalide." })),
+    ).toMatch(/invalides/i);
   });
 
   it("détecte les 404", () => {

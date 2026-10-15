@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { BrandMark } from "@/components/layout/brand-mark";
 import { Button } from "@/components/ui/button";
@@ -11,25 +11,45 @@ import { DesktopCheckoutNav } from "@/features/checkout/components/desktop-check
 import { analyticsEvents } from "@/features/analytics/events";
 import { track } from "@/features/analytics/track";
 import { useCart } from "@/features/cart/hooks/use-cart";
-import type { Order } from "@/types/order";
 import { useCheckoutDraft } from "@/features/checkout/hooks/use-checkout-draft";
+import { getOrderById } from "@/features/order/services/order-service";
+import {
+  isOrderAwaitingPayment,
+  isOrderPaid,
+} from "@/features/order/utils/order-payment-state";
 import { createCheckoutSession } from "@/features/checkout/services/checkout-service";
 import { cartStore } from "@/features/cart/store/cart-store";
 import { checkoutDraftStore } from "@/features/checkout/store/checkout-draft-store";
-import { openFedapayCheckout } from "@/features/payment/services/fedapay-service";
+import { openPaymentCheckout } from "@/features/payment/services/payment-checkout-service";
 import { rememberPendingPayment } from "@/features/payment/store/pending-payment";
 import { formatMoney } from "@/lib/utils/format-money";
 import { toUserMessage, ValidationError } from "@/lib/api/errors";
-import { validateCheckoutDraft } from "@/lib/validation/checkout";
+import {
+  resetSharedCheckoutOrder,
+  getSharedCheckoutOrder,
+  getSharedOpenPaymentCheckout,
+  stageVeltoRedirect,
+} from "@/features/checkout/utils/checkout-processing-session";
+import {
+  completeVeltoRedirectIfReady,
+  subscribeVeltoRedirectReady,
+} from "@/features/checkout/utils/velto-redirect-session";
+import { commitCheckoutDraftForPayment } from "@/features/checkout/utils/prepare-velto-payment";
+import {
+  checkoutPathForValidationFields,
+  firstCheckoutValidationMessage,
+  validateCheckoutDraft,
+} from "@/lib/validation/checkout";
 
 export function PaymentProcessingView() {
   const cart = useCart();
   const draft = useCheckoutDraft();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const resumeOrderId = searchParams.get("orderId");
   const [status, setStatus] = useState<"processing" | "failed">("processing");
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
-  const started = useRef(false);
 
   /*
    * Creation de commande en cours, partagee par les rejeux d'effet.
@@ -41,56 +61,79 @@ export function PaymentProcessingView() {
    * En partageant la promesse, le rejeu attend la meme commande et n'en cree
    * pas une seconde.
    */
-  const pendingOrder = useRef<Promise<Order> | null>(null);
-
   useEffect(() => {
-    if (started.current) {
+    function beforeVeltoRedirect(orderId: string, checkoutUrl: string) {
+      rememberPendingPayment(orderId, checkoutUrl);
+      if (!resumeOrderId) {
+        cartStore.clear();
+        checkoutDraftStore.clear();
+      }
+      track(analyticsEvents.paymentStarted, { orderId });
+    }
+
+    function tryRedirect() {
+      return completeVeltoRedirectIfReady(beforeVeltoRedirect);
+    }
+
+    if (tryRedirect()) {
       return;
     }
+
+    const unsubscribe = subscribeVeltoRedirectReady(() => {
+      tryRedirect();
+    });
 
     checkoutDraftStore.hydrate();
     cartStore.hydrate();
     const readyCart = cartStore.getSnapshot();
-    const readyDraft = checkoutDraftStore.getSnapshot();
-    if (readyCart.items.length === 0) {
+    if (!resumeOrderId && readyCart.items.length === 0) {
       router.replace("/cart");
       return;
     }
-    if (!readyDraft.paymentMethod) {
-      router.replace("/checkout/payment");
-      return;
-    }
 
-    started.current = true;
     let cancelled = false;
 
     async function run() {
       try {
-        const latestDraft = checkoutDraftStore.getSnapshot();
-        const latestCart = cartStore.getSnapshot();
-        validateCheckoutDraft(latestDraft);
+        let orderId: string;
 
-        pendingOrder.current ??= createCheckoutSession(
-          latestDraft,
-          latestCart.items,
-        );
-        const order = await pendingOrder.current;
-        if (cancelled) {
-          return;
+        if (resumeOrderId) {
+          const existing = await getOrderById(resumeOrderId);
+          if (cancelled) {
+            return;
+          }
+          if (isOrderPaid(existing)) {
+            router.replace(
+              `/checkout/confirmation?orderId=${encodeURIComponent(existing.id)}`,
+            );
+            return;
+          }
+          if (!isOrderAwaitingPayment(existing)) {
+            setStatus("failed");
+            setError(
+              "Cette commande ne peut plus être payée ici. Contacte-nous si tu as été débité.",
+            );
+            return;
+          }
+          orderId = existing.id;
+        } else {
+          const latestDraft = commitCheckoutDraftForPayment(
+            checkoutDraftStore.getSnapshot(),
+          );
+          const latestCart = cartStore.getSnapshot();
+          validateCheckoutDraft(latestDraft);
+
+          const order = await getSharedCheckoutOrder(() =>
+            createCheckoutSession(latestDraft, latestCart.items),
+          );
+          if (cancelled) {
+            return;
+          }
+          orderId = order.id;
         }
 
         /*
-         * Le panier est vide a partir d'ici : la commande existe, la facturer
-         * ne depend plus de lui. Il ne doit surtout pas etre reconstitue si
-         * l'acheteur revient en arriere depuis la page de l'operateur, sinon il
-         * verrait ses articles toujours disponibles et pourrait en commander
-         * une seconde fois.
-         */
-        cartStore.clear();
-        checkoutDraftStore.clear();
-
-        /*
-         * Le reglement se fait chez FedaPay : on ouvre la page de l'operateur
+         * Le reglement se fait chez Velto : on ouvre la page de l'operateur
          * et le navigateur y va. On ne « simule » rien et on ne suppose aucun
          * succes — le retour se fait par la page de retour, qui attend le
          * webhook.
@@ -99,45 +142,70 @@ export function PaymentProcessingView() {
          * retour de l'operateur est unique pour tous les acheteurs, elle ne
          * peut donc pas porter l'identifiant de la commande.
          */
-        const { checkoutUrl } = await openFedapayCheckout(order.id);
+        const { checkoutUrl } = await getSharedOpenPaymentCheckout(orderId, () =>
+          openPaymentCheckout(orderId),
+        );
+        stageVeltoRedirect(orderId, checkoutUrl);
+        rememberPendingPayment(orderId, checkoutUrl);
+
+        /*
+         * Le panier est vide seulement au moment de quitter pour Velto : en dev,
+         * React peut rejouer l'effet avant la redirection ; vider trop tot
+         * renverrait l'acheteur au panier vide.
+         */
+        if (!resumeOrderId) {
+          cartStore.clear();
+          checkoutDraftStore.clear();
+        }
+
         if (cancelled) {
           return;
         }
-        rememberPendingPayment(order.id, checkoutUrl);
 
-        track(analyticsEvents.paymentStarted, { orderId: order.id });
-        window.location.assign(checkoutUrl);
+        tryRedirect();
       } catch (runError) {
         if (cancelled) {
           return;
         }
-        started.current = false;
         track(analyticsEvents.paymentFailed, { reason: "checkout_error" });
+        if (runError instanceof ValidationError) {
+          const hasClientFields = Object.keys(runError.fields).some((key) =>
+            [
+              "firstName",
+              "lastName",
+              "email",
+              "phone",
+              "customer_phone_number",
+              "deliveryMethod",
+              "shipping",
+              "paymentMethod",
+            ].includes(key),
+          );
+          if (hasClientFields) {
+            router.replace(checkoutPathForValidationFields(runError.fields));
+            return;
+          }
+          setStatus("failed");
+          setError(firstCheckoutValidationMessage(runError.fields));
+          return;
+        }
         setStatus("failed");
-        setError(
-          runError instanceof ValidationError
-            ? "Des informations de commande sont incomplètes."
-            : toUserMessage(runError),
-        );
+        setError(toUserMessage(runError));
       }
     }
 
     void run();
     return () => {
-      // Le panier peut avoir ete vide entre-temps : on libere l'etat pour que
-      // l'effet puisse rejouer apres une reactivation. La commande en cours,
-      // elle, reste memorisee : elle existe deja cote API.
       cancelled = true;
-      started.current = cartStore.getSnapshot().items.length === 0;
+      unsubscribe();
     };
-  }, [router, retryKey]);
+  }, [router, retryKey, resumeOrderId]);
 
   function retry() {
-    started.current = false;
     // Une nouvelle tentative doit repartir d'une commande neuve. Rejouer la
     // precedente echouee rapporterait le meme echec, et laisserait l'acheteur
     // sans facture a regler.
-    pendingOrder.current = null;
+    resetSharedCheckoutOrder();
     setStatus("processing");
     setError(null);
     setRetryKey((value) => value + 1);
@@ -145,7 +213,7 @@ export function PaymentProcessingView() {
 
   /*
    * Seul le moyen de paiement est reellement transmis a l'API. L'operateur
-   * mobile saisi au checkout ne l'est pas : FedaPay propose lui-meme le choix
+   * mobile saisi au checkout ne l'est pas : Velto propose lui-meme le choix
    * du reseau sur sa page, donc l'afficher ici laisserait croire a un choix
    * deja transmis que l'on aurait enregistre.
    */
@@ -180,10 +248,10 @@ export function PaymentProcessingView() {
               Réessayer
             </Button>
             <Link
-              href="/checkout/payment"
+              href="/checkout/information"
               className="text-center text-sm text-tdev-yellow"
             >
-              Changer de moyen de paiement
+              Revenir aux coordonnées
             </Link>
           </div>
         ) : (
@@ -202,13 +270,11 @@ export function PaymentProcessingView() {
               en cours
             </h1>
             <p className="mt-6 max-w-[448px] text-center text-sm leading-relaxed text-[#b5b5b5] lg:text-base">
-              Nous te redirigeons vers{" "}
-              <span className="font-bold text-tdev-white">FedaPay</span> pour
-              valider ton reglement de{" "}
+              Nous t&apos;ouvrons la page de paiement sécurisée pour régler{" "}
               <span className="font-bold text-tdev-orange">
                 {formatMoney(cart.subtotal)}
               </span>
-              . Tu seras ramene ici juste apres.
+              . Tu reviendras ici dès que tu auras terminé.
             </p>
 
             <div className="motion-processing-dots mt-8 flex items-center gap-2" aria-hidden="true">
@@ -238,7 +304,7 @@ export function PaymentProcessingView() {
                 </dt>
                 <dd className="flex items-center gap-1.5 text-xs font-bold text-tdev-yellow">
                   <span className="size-2 bg-tdev-yellow" />
-                  Ouverture de la page de reglement
+                  Ouverture de la page de paiement
                 </dd>
               </div>
               <div className="h-px bg-[#33383a]" />
@@ -253,13 +319,13 @@ export function PaymentProcessingView() {
             </dl>
 
             <p className="mt-6 flex w-full items-center justify-center gap-2.5 bg-tdev-orange px-4 py-3.5 text-center text-sm font-bold tracking-[0.35px] text-tdev-anthracite">
-              Ne ferme pas cette page : tu vas être redirigé chez FedaPay
+              Ne ferme pas cette page : la redirection démarre dans un instant
             </p>
 
             <div className="mt-6 flex w-full items-center justify-between gap-3">
               <p className="flex items-center gap-2 text-xs text-[#8a8f91]">
                 <ShieldIcon className="size-4 text-tdev-green" />
-                Reglement chez FedaPay, aucun numero de carte ici
+                Paiement sécurisé : aucune carte saisie sur cette page
               </p>
               <button
                 type="button"
@@ -277,7 +343,7 @@ export function PaymentProcessingView() {
         <p>© 2026 TDEV Festival • Boutique Officielle • Besoin d&apos;aide ? contact@tdev.tg</p>
         <p className="flex items-center gap-1.5 text-tdev-white">
           <span className="size-2 rounded-full bg-tdev-green" />
-          Serveurs de paiement opérationnels
+          Paiement sécurisé disponible
         </p>
       </footer>
     </div>
