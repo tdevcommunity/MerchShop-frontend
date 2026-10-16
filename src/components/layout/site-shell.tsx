@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { CartNotices } from "@/features/cart/components/cart-notices";
 
 type SiteShellProps = {
   children: ReactNode;
@@ -12,6 +13,7 @@ export function SiteShell({ children }: SiteShellProps) {
       <SiteHeader />
       <main className="w-full flex-1">{children}</main>
       <SiteFooter />
+      <CartNotices />
     </div>
   );
 }

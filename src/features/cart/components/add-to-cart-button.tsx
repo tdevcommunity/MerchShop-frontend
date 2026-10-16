@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { analyticsEvents } from "@/features/analytics/events";
 import { track } from "@/features/analytics/track";
+import { notifyAddedToCart } from "@/features/cart/feedback";
 import { useCartActions } from "@/features/cart/hooks/use-cart";
 import { variantLabel } from "@/features/cart/utils";
 import type { Product, ProductVariant } from "@/types/catalog";
@@ -44,6 +45,7 @@ export function AddToCartButton({
       productId: product.id,
       variantId: variant.id,
     });
+    notifyAddedToCart(product.name, variantLabel(variant.size, variant.color));
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1400);
   }
