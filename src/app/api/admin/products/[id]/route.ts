@@ -75,9 +75,15 @@ export async function GET(request: Request, { params }: Context) {
   if (auth.error) return auth.error;
   try {
     const { id } = await params;
+    /*
+     * Lecture de gestion : un produit masque (brouillon, archive) n'est pas
+     * serviable par la route publique, qui repond 404. Sa propre fiche doit
+     * pourtant s'ouvrir, sinon un produit depublie devient impossible a
+     * corriger ou a republier.
+     */
     const result = await laravelFetch<Record<string, unknown>>(
       request,
-      `/api/v1/products/${id}`,
+      `/api/v1/admin/products/${id}`,
     );
     return NextResponse.json(mapLaravelProduct(result));
   } catch (error) {

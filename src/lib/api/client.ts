@@ -183,3 +183,47 @@ export async function apiRequest<T>(
   }
   return raw as T;
 }
+
+/**
+ * Toutes les pages d'un endpoint pagine, dans l'ordre du serveur.
+ *
+ * L'API pagine la liste du catalogue (15 elements par defaut) : ne lire que la
+ * premiere page revient a tronquer le catalogue, et un filtrage cote client
+ * sur cette tranche fait apparaitre des categories vides des que le shop
+ * depasse une page. On parcourt donc les pages jusqu'a `lastPage`, en lisant
+ * la meta que `apiRequest` abandonne.
+ *
+ * Le retry CSRF de `apiRequestRaw` est herite tel quel : chaque page passe par
+ * le meme chemin authentifie.
+ */
+export async function apiRequestAll<T>(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<T[]> {
+  const items: T[] = [];
+  let page = 1;
+  let lastPage = 1;
+
+  do {
+    const separator = path.includes("?") ? "&" : "?";
+    const response = await apiRequestRaw(`${path}${separator}page=${page}`, options);
+    if (!response.ok) {
+      await handleResponseError(response);
+    }
+
+    const raw: unknown = await response.json();
+    const payload = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+    const data = Array.isArray(payload.data) ? (payload.data as T[]) : [];
+    items.push(...data);
+
+    const meta = payload.meta;
+    const reportedLastPage =
+      meta && typeof meta === "object"
+        ? Number((meta as { lastPage?: unknown }).lastPage)
+        : NaN;
+    lastPage = Number.isFinite(reportedLastPage) && reportedLastPage > 0 ? reportedLastPage : page;
+    page += 1;
+  } while (page <= lastPage);
+
+  return items;
+}
