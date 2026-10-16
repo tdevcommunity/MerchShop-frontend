@@ -80,6 +80,10 @@ const apiRequestMock = vi.fn();
 
 vi.mock("@/lib/api/client", () => ({
   apiRequest: (...args: unknown[]) => apiRequestMock(...args),
+  // Le service catalogue lit desormais toutes les pages via apiRequestAll :
+  // le mock doit exposer cette fonction, sinon le module simule serait
+  // incomplet et l'import echouerait.
+  apiRequestAll: (...args: unknown[]) => apiRequestMock(...args),
 }));
 
 const { listProducts, listShopCategories } = await import(
@@ -114,17 +118,23 @@ describe("listProducts()", () => {
     expect(new Set(keys).size).toBe(products.length);
   });
 
-  it("renvoie une liste vide si la reponse est absente", async () => {
-    apiRequestMock.mockResolvedValue(undefined);
+  it("renvoie une liste vide quand aucune page ne renvoie de produit", async () => {
+    apiRequestMock.mockResolvedValue([]);
 
     await expect(listProducts()).resolves.toEqual([]);
   });
 
-  it("applique le filtre de categorie sur le slug mappe, pas sur l'objet brut", async () => {
-    apiRequestMock.mockResolvedValue(rawProducts);
+  it("resout le filtre de categorie par l'API, et non sur la tranche chargee", async () => {
+    // La categorie est passee au serveur (`?category=`) : le front ne filtre
+    // plus lui-meme, sinon une categorie absente de la premiere page
+    // s'afficherait vide.
+    apiRequestMock.mockResolvedValue([rawProducts[2]]);
 
     const products = await listProducts({ category: "bagagerie" });
 
+    expect(apiRequestMock).toHaveBeenCalledWith(
+      "/api/v1/products?category=bagagerie",
+    );
     expect(products.map((product) => product.name)).toEqual(["Totebag TDEV"]);
   });
 });
