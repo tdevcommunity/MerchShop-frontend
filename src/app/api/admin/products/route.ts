@@ -74,14 +74,36 @@ export async function GET(request: Request) {
   try {
     const searchParams = new URL(request.url).searchParams;
     const search: Record<string, string> = {};
-    for (const key of ["page", "pageSize", "q", "status", "category"]) {
+    for (const key of ["page", "q", "status", "category"]) {
       const value = searchParams.get(key);
       if (value) search[key] = value;
     }
-    const result = await laravelList<Record<string, unknown>>(request, "/api/v1/products", search);
+
+    /*
+     * `pageSize` est le nom cote ecran, `per_page` celui de l'API. Les deux ne
+     * se rencontraient pas : la liste demandait 20 ou 50 par page et l'API en
+     * servait 15, sans que rien ne le signale. La traduction se fait ici, au
+     * seul endroit qui connait les deux vocabulaires.
+     */
+    const pageSize = searchParams.get("pageSize");
+    if (pageSize) search.per_page = pageSize;
+
+    /*
+     * `/api/v1/admin/products` et non `/api/v1/products` : la lecture publique
+     * ne sert que les produits actifs, donc un brouillon cree a l'instant n'y
+     * figurait pas et disparaissait de sa propre liste de gestion.
+     */
+    const result = await laravelList<Record<string, unknown>>(
+      request,
+      "/api/v1/admin/products",
+      search,
+    );
+
     return NextResponse.json({
-      ...result,
-      data: result.data.map(mapLaravelProduct),
+      items: result.data.map(mapLaravelProduct),
+      total: result.meta.total,
+      page: result.meta.currentPage,
+      pageSize: result.meta.perPage,
     });
   } catch (error) {
     return laravelErrorResponse(error);
