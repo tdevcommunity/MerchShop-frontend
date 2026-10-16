@@ -6,6 +6,7 @@ import { TrashIcon } from "@/components/ui/icons";
 import { analyticsEvents } from "@/features/analytics/events";
 import { track } from "@/features/analytics/track";
 import { ProductImage } from "@/features/catalog/components/product-image";
+import { notifyQuantityUpdated, notifyRemovedFromCart } from "@/features/cart/feedback";
 import { useCartActions } from "@/features/cart/hooks/use-cart";
 import { lineSubtotal } from "@/features/cart/utils";
 import { formatMoney } from "@/lib/utils/format-money";
@@ -43,9 +44,18 @@ export function CartItemRow({ item }: CartItemRowProps) {
           <QuantityStepper
             id={`qty-${item.variantId}`}
             value={item.quantity}
-            onChange={(value) =>
-              updateQuantity(item.productId, item.variantId, value)
-            }
+            onChange={(value) => {
+              if (value < 1) {
+                removeItem(item.productId, item.variantId);
+                notifyRemovedFromCart(item.productName, item.variantId);
+                return;
+              }
+              if (value === item.quantity) {
+                return;
+              }
+              updateQuantity(item.productId, item.variantId, value);
+              notifyQuantityUpdated(item.productName, item.variantId, value);
+            }}
             label={`Quantité pour ${item.productName}`}
           />
           <Button
@@ -53,6 +63,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
             size="sm"
             onClick={() => {
               removeItem(item.productId, item.variantId);
+              notifyRemovedFromCart(item.productName, item.variantId);
               track(analyticsEvents.removeFromCart, {
                 productId: item.productId,
                 variantId: item.variantId,
