@@ -10,14 +10,15 @@ import type { Order } from "@/types/order";
  */
 export async function syncPaymentReturn(
   orderId: string,
-  transactionId: string,
+  transactionId?: string,
 ): Promise<Order> {
   const cached = readCachedOrder(orderId);
+  const trimmed = transactionId?.trim() ?? "";
   const raw = await apiRequest<LaravelOrder>(
     apiEndpoints.syncPaymentReturn(orderId),
     {
       method: "POST",
-      body: { transaction_id: transactionId },
+      body: trimmed !== "" ? { transaction_id: trimmed } : {},
     },
   );
 
