@@ -166,11 +166,10 @@ export function PaymentReturnView() {
         "Le paiement n'a pas abouti. Aucun montant n'a été encaissé et tu peux réessayer.";
 
       try {
-        if (transactionId.trim() !== "") {
-          try {
+        try {
             const synced = await syncPaymentReturn(
               orderId,
-              transactionId.trim(),
+              transactionId.trim() !== "" ? transactionId.trim() : undefined,
             );
             if (isOrderPaid(synced)) {
               clearPendingPayment();
@@ -199,7 +198,7 @@ export function PaymentReturnView() {
               );
               return;
             }
-          } catch (syncError) {
+        } catch (syncError) {
             if (syncError instanceof ApiError && syncError.status === 403) {
               setState({
                 phase: "orphan",
@@ -218,16 +217,6 @@ export function PaymentReturnView() {
               );
               return;
             }
-          }
-        } else if (exitedWithoutSuccess) {
-          clearPendingPayment();
-          setState(
-            showPaymentFailed(
-              orderId,
-              failureMessageForReturn(searchParams, genericFailureMessage),
-            ),
-          );
-          return;
         }
 
         const pollMs = returnStatus === "approved" ? 20_000 : 8_000;
