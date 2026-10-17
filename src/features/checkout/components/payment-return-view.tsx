@@ -15,7 +15,10 @@ import {
   readPendingPayment,
   rememberPendingPayment,
 } from "@/features/payment/store/pending-payment";
-import { getOrderGuestToken } from "@/lib/api/order-token";
+import {
+  getOrderGuestToken,
+  saveOrderGuestToken,
+} from "@/lib/api/order-token";
 import {
   failureMessageForReturn,
   isOperatorPaymentAbandoned,
@@ -37,9 +40,23 @@ function showPaymentFailed(orderId: string, message: string): State {
   return { phase: "failed", orderId, message };
 }
 
+function persistGuestTokenFromReturnUrl(searchParams: URLSearchParams): void {
+  const orderId = searchParams.get("orderId")?.trim() ?? "";
+  const token =
+    searchParams.get("orderToken")?.trim() ??
+    searchParams.get("order_token")?.trim() ??
+    "";
+
+  if (orderId !== "" && token !== "") {
+    saveOrderGuestToken(orderId, token);
+  }
+}
+
 function resolveTrackedOrderId(
   searchParams: URLSearchParams,
 ): { orderId: string } | { error: string } {
+  persistGuestTokenFromReturnUrl(searchParams);
+
   const pending = readPendingPayment();
   const queryOrderId = searchParams.get("orderId")?.trim() ?? "";
 
