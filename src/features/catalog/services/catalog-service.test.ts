@@ -5,7 +5,18 @@ import {
   listShopCategories,
 } from "./catalog-service";
 
-describe("catalog-service", () => {
+/*
+ * Test d'integration : il interroge la vraie API, sans mock.
+ *
+ * Il ne s'execute que si NEXT_PUBLIC_API_BASE_URL est defini, car une CI isolee
+ * n'a pas d'API joignable (les appels echouent en NetworkError). Le reste de la
+ * suite (_mapping.test.ts) couvre le meme service avec un client simule.
+ *
+ *   NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run test:integration
+ */
+const liveDescribe = process.env.NEXT_PUBLIC_API_BASE_URL ? describe : describe.skip;
+
+liveDescribe("catalog-service (API reelle)", () => {
   it("retourne les catégories du shop via l'API", async () => {
     const categories = await listShopCategories();
     expect(categories.length).toBeGreaterThan(0);

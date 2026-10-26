@@ -66,7 +66,8 @@ if (vulnerabilities.length === 0) {
     "| --- | --- | --- | --- | --- |",
     ...rows,
     "",
-    "Correctifs automatiques : lancer `npm audit fix` (securise) ou le workflow **Security fixes**.",
+    "Correction manuelle : `npm audit fix` (versions compatibles) ou `npm install <paquet>@latest`,",
+    "puis verifier `lint`, `typecheck`, `test` et `build`, et committer soi-meme.",
   );
 }
 
