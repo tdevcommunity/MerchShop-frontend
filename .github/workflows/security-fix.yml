@@ -1,0 +1,123 @@
+# Correction automatisee des dependances vulnerables du frontend.
+#
+# Chaque lundi, ou manuellement, le job :
+#  1. applique les correctifs npm non cassants (`npm audit fix`) ;
+#  2. verifie que le lint, les types et les tests passent toujours ;
+#  3. ouvre une PR avec le package.json / package-lock.json mis a jour.
+#
+# Rien n'est pousse sur main : la PR doit etre relue et mergee. Le mode
+# "force" (breaking changes) n'est disponible qu'en lancement manuel.
+#
+# Optionnel : creer un secret SECURITY_FIX_TOKEN (PAT avec droits contents +
+# pull-requests) pour que les workflows CI se declenchent sur la PR. Avec le
+# GITHUB_TOKEN par defaut, GitHub n'execute pas de workflow sur la PR creee.
+
+name: Security fixes
+
+on:
+  schedule:
+    # Chaque lundi a 05:17 UTC, apres le scan security.yml.
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "safe = npm audit fix, force = accepte les breaking changes"
+        type: choice
+        options: [safe, force]
+        default: safe
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: security-fix
+  cancel-in-progress: false
+
+jobs:
+  npm-fix:
+    name: Corriger les dependances npm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dependances
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Appliquer les correctifs
+        env:
+          MODE: ${{ inputs.mode || 'safe' }}
+        run: |
+          set -euo pipefail
+          if [ "$MODE" = "force" ]; then
+            npm audit fix --force --no-audit --no-fund
+          else
+            npm audit fix --no-audit --no-fund
+          fi
+          npm audit --json > npm-audit-after.json || true
+          node .github/scripts/npm-audit-summary.mjs npm-audit-after.json || true
+
+      - name: Verifier que le projet fonctionne toujours
+        env:
+          MODE: ${{ inputs.mode || 'safe' }}
+        run: |
+          set -euo pipefail
+          npm run lint
+          npm run typecheck
+          # catalog-service.test.ts est un test d'integration : il exige une API
+          # joignable et echoue donc sur un runner isole. Les tests unitaires
+          # (mocks) couvrent le reste.
+          npm test -- --exclude "src/features/catalog/services/catalog-service.test.ts"
+          if [ "$MODE" = "force" ]; then
+            npm run build
+          fi
+
+      - name: Ouvrir une pull request
+        env:
+          GH_TOKEN: ${{ secrets.SECURITY_FIX_TOKEN || secrets.GITHUB_TOKEN }}
+          MODE: ${{ inputs.mode || 'safe' }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- package.json package-lock.json; then
+            echo "Aucun correctif a appliquer : rien a faire."
+            exit 0
+          fi
+
+          branch="security/npm-fix-$(date -u +%Y%m%d-%H%M%S)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add package.json package-lock.json
+          git commit -m "fix(security): appliquer les correctifs npm audit"
+          git push origin "$branch"
+
+          body=$(cat <<'EOF'
+          Correctifs de securite appliques automatiquement par le workflow
+          **Security fixes** (`npm audit fix`).
+
+          Verifications effectuees avant l'ouverture de la PR :
+          - `npm run lint`
+          - `npm run typecheck`
+          - `npm test`
+
+          Relire le diff du `package-lock.json` puis merger si le workflow
+          **Security** est vert.
+          EOF
+          )
+
+          gh pr create \
+            --base "$BASE_BRANCH" \
+            --head "$branch" \
+            --title "fix(security): correctifs npm audit ($MODE)" \
+            --body "$body"
