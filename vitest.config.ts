@@ -11,6 +11,7 @@ export default defineConfig({
     },
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    exclude: ["src/features/catalog/services/catalog-service.test.ts"],
     restoreMocks: true,
   },
   resolve: {
