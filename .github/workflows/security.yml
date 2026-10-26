@@ -3,7 +3,6 @@
 # Jobs :
 #  - npm-audit          : audite les dependances (bloque sur toute vulnerabilite) ;
 #  - codeql             : analyse statique du code TypeScript/JavaScript ;
-#  - dependency-review  : bloque les PR qui ajoutent une dependance vulnerable ;
 #  - trivy-fs           : secrets, erreurs de configuration, dependances (SARIF) ;
 #  - trivy-image        : vulnerabilites de l'image Docker de production.
 #
@@ -80,23 +79,6 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: /language:javascript-typescript
-
-  dependency-review:
-    name: Revue des dependances (PR)
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Verifier les dependances ajoutees
-        uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: low
-          comment-summary-in-pr: on-failure
 
   trivy-fs:
     name: Trivy (fichiers, secrets, config)
